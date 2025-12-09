@@ -305,12 +305,13 @@ export default function App() {
 }
 
 const palette = {
-  background: "#0b1021",
-  card: "#131a2f",
-  accent: "#5ee0c2",
-  text: "#e7ecf7",
-  muted: "#8fa2c9",
-  danger: "#ff647f",
+  background: "#0b0b0b",
+  card: "#111",
+  accent: "#f5f5f5",
+  text: "#f5f5f5",
+  muted: "#b1b1b1",
+  border: "#1f1f1f",
+  danger: "#ff4d4d",
 };
 
 const styles = StyleSheet.create({
@@ -343,6 +344,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginVertical: 6,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   cardHeader: {
     flexDirection: "row",
@@ -356,12 +359,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   badge: {
-    backgroundColor: palette.accent,
-    color: "#0b1021",
+    backgroundColor: "transparent",
+    color: palette.text,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
     fontWeight: "700",
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   meta: {
     color: palette.muted,
@@ -381,7 +386,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   actionButtonSecondary: {
-    backgroundColor: "#1f2942",
+    backgroundColor: palette.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -395,11 +400,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: "#1c2741",
+    backgroundColor: palette.card,
     color: palette.text,
     padding: 10,
     borderRadius: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   primaryButton: {
     backgroundColor: palette.accent,
@@ -408,7 +415,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryText: {
-    color: "#0b1021",
+    color: "#0b0b0b",
     fontWeight: "700",
     fontSize: 16,
   },
@@ -416,7 +423,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#27324d",
+    borderColor: palette.border,
   },
   secondaryText: {
     color: palette.text,
@@ -442,9 +449,11 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: "#1c2741",
+    backgroundColor: palette.card,
     padding: 10,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   metricLabel: {
     color: palette.muted,
