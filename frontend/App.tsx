@@ -241,58 +241,30 @@ export default function App() {
           </View>
         </View>
 
-        <View style={styles.topRow}>
-          <View style={styles.topColumn}>
-            <View style={styles.card}>
-              <Text style={styles.label}>Nom de l'entreprise</Text>
-              <TextInput
-                value={companyName}
-                onChangeText={setCompanyName}
-                style={styles.input}
-                placeholder="Ex: Nova Ops"
-                editable={!loading}
-              />
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={handleStart}
-                disabled={loading || companyName.trim().length === 0}
-              >
-                <Text style={styles.primaryText}>{hasGame ? "Relancer une partie" : "Démarrer"}</Text>
-              </TouchableOpacity>
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-            </View>
-          </View>
-
-          {hasGame && state ? (
+        {!hasGame && (
+          <View style={styles.topRow}>
             <View style={styles.topColumn}>
               <View style={styles.card}>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryText}>Jour {state.day}</Text>
-                  <Text style={styles.summaryText}>{state.company.name}</Text>
-                </View>
-                <View style={styles.metricsRow}>
-                  <View style={styles.metricCard}>
-                    <Text style={styles.metricLabel}>Cash</Text>
-                    <Text style={styles.metricValue}>{formatCurrency(state.company.cash)}</Text>
-                  </View>
-                  <View style={styles.metricCard}>
-                    <Text style={styles.metricLabel}>Revenu</Text>
-                    <Text style={styles.metricValue}>{formatCurrency(summary?.revenue ?? 0)}</Text>
-                  </View>
-                  <View style={styles.metricCard}>
-                    <Text style={styles.metricLabel}>Coûts</Text>
-                    <Text style={styles.metricValue}>{formatCurrency(summary?.costs ?? 0)}</Text>
-                  </View>
-                </View>
-                {summary ? (
-                  <Text style={styles.meta}>Résultat net: {formatCurrency(summary.net)}</Text>
-                ) : (
-                  <Text style={styles.meta}>Lance le premier jour pour voir les résultats.</Text>
-                )}
+                <Text style={styles.label}>Nom de l'entreprise</Text>
+                <TextInput
+                  value={companyName}
+                  onChangeText={setCompanyName}
+                  style={styles.input}
+                  placeholder="Ex: Nova Ops"
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={handleStart}
+                  disabled={loading || companyName.trim().length === 0}
+                >
+                  <Text style={styles.primaryText}>{hasGame ? "Relancer une partie" : "Démarrer"}</Text>
+                </TouchableOpacity>
+                {error ? <Text style={styles.error}>{error}</Text> : null}
               </View>
             </View>
-          ) : null}
-        </View>
+          </View>
+        )}
 
         {hasGame && state ? (
           <View style={styles.tabContent}>
@@ -346,10 +318,45 @@ export default function App() {
               {activeTab === "finance" && (
                 <View style={styles.block}>
                   <Text style={styles.sectionTitle}>Finance</Text>
+                  <View style={styles.card}>
+                    <Text style={styles.label}>Nom de l'entreprise</Text>
+                    <TextInput
+                      value={companyName}
+                      onChangeText={setCompanyName}
+                      style={styles.input}
+                      placeholder="Ex: Nova Ops"
+                      editable={!loading}
+                    />
+                    <TouchableOpacity
+                      style={styles.primaryButton}
+                      onPress={handleStart}
+                      disabled={loading || companyName.trim().length === 0}
+                    >
+                      <Text style={styles.primaryText}>{hasGame ? "Relancer une partie" : "Démarrer"}</Text>
+                    </TouchableOpacity>
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+                  </View>
+
                   {summary ? (
                     <View style={styles.card}>
-                      <Text style={styles.meta}>Revenu: {formatCurrency(summary.revenue)}</Text>
-                      <Text style={styles.meta}>Coûts: {formatCurrency(summary.costs)}</Text>
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryText}>Jour {state.day}</Text>
+                        <Text style={styles.summaryText}>{state.company.name}</Text>
+                      </View>
+                      <View style={styles.metricsRow}>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricLabel}>Cash</Text>
+                          <Text style={styles.metricValue}>{formatCurrency(state.company.cash)}</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricLabel}>Revenu</Text>
+                          <Text style={styles.metricValue}>{formatCurrency(summary.revenue)}</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricLabel}>Coûts</Text>
+                          <Text style={styles.metricValue}>{formatCurrency(summary.costs)}</Text>
+                        </View>
+                      </View>
                       <Text style={styles.meta}>Résultat net: {formatCurrency(summary.net)}</Text>
                       <Text style={styles.sectionTitleSmall}>Indicateurs opérationnels</Text>
                       <Text style={styles.meta}>Clients: {summary.clients}</Text>
