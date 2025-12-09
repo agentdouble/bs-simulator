@@ -196,7 +196,7 @@ export default function App() {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
-            <Text style={styles.title}>BS Simulator Dashboard</Text>
+            <Text style={styles.title}>BS</Text>
             {hasGame && state ? (
               <View style={styles.tabBar}>
                 <TouchableOpacity
@@ -226,9 +226,6 @@ export default function App() {
               </View>
             ) : null}
           </View>
-          <Text style={styles.subtitle}>
-            Monte ton équipe d'agents IA en gardant toujours une seule page, découpée en sections et onglets, sans scroll infini.
-          </Text>
         </View>
 
         <View style={styles.topRow}>
@@ -399,7 +396,7 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     gap: 12,
   },
   title: {
