@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo, useState } from "react";
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Company = {
   name: string;
@@ -74,6 +74,8 @@ type ActionResponse = {
 };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8055";
+
+const terminalFont = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
 
 async function startGame(companyName: string): Promise<StartResponse> {
   const res = await fetch(`${API_BASE_URL}/game/start`, {
@@ -192,7 +194,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
@@ -303,7 +305,7 @@ export default function App() {
                         <Text style={styles.secondaryText}>Vider</Text>
                       </TouchableOpacity>
                     </View>
-                    {loading ? <ActivityIndicator color="#f1f3f5" style={{ marginTop: 8 }} /> : null}
+                    {loading ? <ActivityIndicator color={palette.text} style={{ marginTop: 8 }} /> : null}
                   </View>
                 </View>
               )}
@@ -400,13 +402,13 @@ export default function App() {
 }
 
 const palette = {
-  background: "#f8f8f8",
+  background: "#ffffff",
   card: "#ffffff",
-  accent: "#111111",
-  text: "#111111",
-  muted: "#555555",
-  border: "#e5e5e5",
-  danger: "#c00000",
+  accent: "#000000",
+  text: "#000000",
+  muted: "#1f1f1f",
+  border: "#000000",
+  danger: "#b00000",
 };
 
 const styles = StyleSheet.create({
@@ -418,10 +420,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingBottom: 16,
+    paddingTop: 12,
+    backgroundColor: palette.background,
   },
   header: {
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 2,
+    borderColor: palette.border,
   },
   headerTopRow: {
     flexDirection: "row",
@@ -438,15 +445,21 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "700",
     color: palette.text,
+    fontFamily: terminalFont,
+    letterSpacing: 1,
   },
   headerCash: {
     fontSize: 13,
     color: palette.muted,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   subtitle: {
     color: palette.muted,
     marginTop: 4,
     marginBottom: 12,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   topRow: {
     flexDirection: "row",
@@ -463,99 +476,129 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: palette.card,
-    borderRadius: 12,
-    padding: 14,
-    marginVertical: 6,
-    borderWidth: 1,
+    borderRadius: 4,
+    padding: 12,
+    marginVertical: 8,
+    borderWidth: 2,
     borderColor: palette.border,
+    shadowColor: palette.accent,
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 0,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   cardTitle: {
     color: palette.text,
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   badge: {
-    backgroundColor: "transparent",
-    color: palette.text,
+    backgroundColor: palette.accent,
+    color: palette.card,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: 4,
     fontWeight: "700",
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: palette.border,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   meta: {
     color: palette.muted,
     marginVertical: 2,
+    fontFamily: terminalFont,
+    letterSpacing: 0.25,
   },
   actionsRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 8,
+    marginTop: 10,
     alignItems: "center",
     flexWrap: "wrap",
   },
   actionButton: {
     backgroundColor: palette.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: palette.border,
   },
   actionButtonSecondary: {
-    backgroundColor: "#f0f0f0",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    backgroundColor: palette.card,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: palette.border,
   },
   actionText: {
     color: "#ffffff",
     fontWeight: "700",
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   actionTextSecondary: {
-    color: palette.text,
+    color: palette.accent,
   },
   label: {
     color: palette.text,
     marginBottom: 6,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: palette.card,
     color: palette.text,
-    padding: 10,
-    borderRadius: 10,
+    padding: 12,
+    borderRadius: 4,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: palette.border,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   primaryButton: {
     backgroundColor: palette.accent,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 4,
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: palette.border,
   },
   primaryText: {
     color: "#ffffff",
     fontWeight: "700",
     fontSize: 16,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   secondaryButton: {
     padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 4,
+    borderWidth: 2,
     borderColor: palette.border,
+    backgroundColor: palette.card,
   },
   secondaryText: {
     color: palette.text,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   error: {
     color: palette.danger,
     marginTop: 8,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   summaryRow: {
     flexDirection: "row",
@@ -565,7 +608,9 @@ const styles = StyleSheet.create({
   summaryText: {
     color: palette.text,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   metricsRow: {
     flexDirection: "row",
@@ -576,53 +621,69 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.card,
     padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 4,
+    borderWidth: 2,
     borderColor: palette.border,
   },
   metricLabel: {
     color: palette.muted,
     marginBottom: 4,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   metricValue: {
     color: palette.text,
     fontSize: 16,
     fontWeight: "700",
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   sectionTitle: {
     color: palette.text,
     fontSize: 18,
     fontWeight: "700",
     marginTop: 10,
+    fontFamily: terminalFont,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   sectionTitleSmall: {
     color: palette.text,
     fontWeight: "700",
     marginTop: 8,
+    fontFamily: terminalFont,
+    letterSpacing: 0.75,
+    textTransform: "uppercase",
   },
   tabBar: {
     flexDirection: "row",
     alignSelf: "flex-start",
-    backgroundColor: "#ececec",
-    borderRadius: 999,
-    padding: 4,
+    backgroundColor: palette.card,
+    borderRadius: 4,
+    padding: 6,
     marginTop: 0,
+    borderWidth: 2,
+    borderColor: palette.border,
   },
   tabButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 999,
+    borderRadius: 4,
   },
   tabButtonActive: {
     backgroundColor: palette.accent,
+    borderWidth: 2,
+    borderColor: palette.border,
   },
   tabButtonText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: palette.muted,
+    fontWeight: "700",
+    color: palette.text,
+    fontFamily: terminalFont,
+    letterSpacing: 0.5,
   },
   tabButtonTextActive: {
-    color: "#ffffff",
+    color: palette.card,
   },
   tabContent: {
     flex: 1,

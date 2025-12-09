@@ -5,6 +5,8 @@ MVP d'un simulateur d'entreprise où les employés sont modélisés comme des ef
 - `backend/` : API FastAPI (Python, gérée avec `uv`).
 - `frontend/` : app React Native (Expo) pour piloter le dashboard.
 
+L'interface web adopte un thème terminal noir/blanc (fond blanc, police monospace pixelisée) pour garder un look minimaliste.
+
 ## Lancer le backend
 
 ```bash
