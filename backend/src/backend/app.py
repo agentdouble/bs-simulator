@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .llm import get_llm_engine
@@ -18,6 +19,14 @@ llm_engine = get_llm_engine(settings.llm_mode)
 service = GameService(repository, llm_engine)
 
 app = FastAPI(title="BS Simulator API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 
 @app.get("/health")

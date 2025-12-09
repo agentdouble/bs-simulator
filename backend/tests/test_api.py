@@ -29,3 +29,15 @@ def test_action_endpoint_returns_report():
     body = res.json()
     assert body["report"]["day"] == 2
     assert body["report"]["results"]["revenue"] >= 0
+
+
+def test_preflight_options_game_start():
+    res = client.options(
+        "/game/start",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == "*"
