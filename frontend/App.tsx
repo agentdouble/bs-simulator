@@ -197,7 +197,7 @@ export default function App() {
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
             <View style={styles.headerLeft}>
-              <Text style={styles.title}>BS</Text>
+              <Text style={styles.title}>B$</Text>
               {hasGame && state ? (
                 <View style={styles.tabBar}>
                   <TouchableOpacity
