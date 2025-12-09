@@ -13,6 +13,12 @@ cd backend
 uv run uvicorn backend.app:app --reload
 ```
 
+Ou via le script racine (lance backend + front) :
+
+```bash
+./start.sh
+```
+
 Endpoints principaux :
 - `POST /game/start` : crée une partie et génère les premiers agents IA.
 - `POST /game/action` : applique les décisions du gérant pour le jour en cours et retourne l'état du jour.
