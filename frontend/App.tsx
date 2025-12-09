@@ -305,13 +305,13 @@ export default function App() {
 }
 
 const palette = {
-  background: "#0b0b0b",
-  card: "#111",
-  accent: "#f5f5f5",
-  text: "#f5f5f5",
-  muted: "#b1b1b1",
-  border: "#1f1f1f",
-  danger: "#ff4d4d",
+  background: "#f8f8f8",
+  card: "#ffffff",
+  accent: "#111111",
+  text: "#111111",
+  muted: "#555555",
+  border: "#e5e5e5",
+  danger: "#c00000",
 };
 
 const styles = StyleSheet.create({
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   actionButtonSecondary: {
-    backgroundColor: palette.border,
+    backgroundColor: "#f0f0f0",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryText: {
-    color: "#0b0b0b",
+    color: "#ffffff",
     fontWeight: "700",
     fontSize: 16,
   },
