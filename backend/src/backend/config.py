@@ -4,18 +4,20 @@ from dataclasses import dataclass
 
 @dataclass
 class Settings:
-    llm_mode: str
+    openai_api_key: str
+    openai_model: str
     supabase_url: str | None
     supabase_key: str | None
 
 
 def get_settings() -> Settings:
-    llm_mode = os.getenv("LLM_MODE", "local").lower()
-    if llm_mode not in {"local", "api"}:
-        raise ValueError("LLM_MODE must be 'local' or 'api'")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY est requis pour le mode LLM API")
 
     return Settings(
-        llm_mode=llm_mode,
+        openai_api_key=api_key,
+        openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         supabase_url=os.getenv("SUPABASE_URL"),
         supabase_key=os.getenv("SUPABASE_KEY"),
     )

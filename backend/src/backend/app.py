@@ -15,10 +15,12 @@ logger = logging.getLogger(__name__)
 
 settings = get_settings()
 repository = InMemoryGameRepository()
-llm_engine = get_llm_engine(settings.llm_mode)
+llm_engine = get_llm_engine(settings)
 service = GameService(repository, llm_engine)
 
 app = FastAPI(title="BS Simulator API", version="0.1.0")
+
+logger.info("Mode LLM API initialisé avec le modèle %s", settings.openai_model)
 
 app.add_middleware(
     CORSMiddleware,

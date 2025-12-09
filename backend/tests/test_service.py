@@ -1,11 +1,16 @@
-from backend.llm import LocalLLMEngine
+from backend.llm import LLMEngine
 from backend.repositories import InMemoryGameRepository
 from backend.schemas import ActionRequest, ManagerAction, StartGameRequest
 from backend.service import GameService
 
 
+class StubLLMEngine(LLMEngine):
+    def generate_recommendations(self, state, report):
+        return ["Recommandation test"]
+
+
 def test_start_game_creates_state():
-    service = GameService(InMemoryGameRepository(), LocalLLMEngine())
+    service = GameService(InMemoryGameRepository(), StubLLMEngine())
     state = service.start_game(StartGameRequest(company_name="Nova Corp"))
 
     assert state.game_id
@@ -16,7 +21,7 @@ def test_start_game_creates_state():
 
 
 def test_apply_actions_updates_day_and_agents():
-    service = GameService(InMemoryGameRepository(), LocalLLMEngine())
+    service = GameService(InMemoryGameRepository(), StubLLMEngine())
     state = service.start_game(StartGameRequest(company_name="Nova Corp"))
 
     target_agent = state.agents[0]

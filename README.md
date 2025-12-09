@@ -14,9 +14,9 @@ uv run uvicorn backend.app:app --reload
 ```
 
 Variables d'environnement attendues (voir `backend/.env`):
-- `LLM_MODE` (`local` par défaut, ou `api`)
-- `SUPABASE_URL`, `SUPABASE_KEY`
-- `OPENAI_API_KEY` (pour un provider API externe)
+- `OPENAI_API_KEY` (obligatoire pour le LLM OpenAI)
+- `OPENAI_MODEL` (optionnel, défaut `gpt-4o-mini`)
+- `SUPABASE_URL`, `SUPABASE_KEY` (optionnels)
 
 Ou via le script racine (lance backend + front) :
 
@@ -29,9 +29,7 @@ Endpoints principaux :
 - `POST /game/action` : applique les décisions du gérant pour le jour en cours et retourne l'état du jour.
 - `GET /game/state/{game_id}` : récupère l'état courant.
 
-Modes LLM (choisir via `LLM_MODE`):
-- `local` (par défaut) : recommandations heuristiques locales.
-- `api` : mode placeholder pour un provider externe (à brancher plus tard).
+LLM : le backend utilise exclusivement l'API OpenAI (modèle `gpt-4o-mini` par défaut). Fournis une clé via `OPENAI_API_KEY` avant de lancer le serveur.
 
 Tests backend :
 
@@ -57,5 +55,5 @@ Le schéma minimal se trouve dans `infra/supabase/schema.sql`. Une implémentati
 ## Structure
 
 - `backend/src/backend/service.py` : moteur de jeu (génération d'agents, application des actions, calcul des résultats).
-- `backend/src/backend/llm.py` : interface LLM avec modes `local` et `api`.
+- `backend/src/backend/llm.py` : interface LLM connectée à l'API OpenAI.
 - `frontend/App.tsx` : écrans dashboard + actions rapides sur les agents.

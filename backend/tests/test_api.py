@@ -1,9 +1,21 @@
+import os
+
 from fastapi.testclient import TestClient
 
-from backend.app import app
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
+
+from backend import app as app_module
+from backend.llm import LLMEngine
 
 
-client = TestClient(app)
+class StubLLMEngine(LLMEngine):
+    def generate_recommendations(self, state, report):
+        return ["Recommandation via stub"]
+
+
+app_module.llm_engine = StubLLMEngine()
+app_module.service.llm_engine = app_module.llm_engine
+client = TestClient(app_module.app)
 
 
 def test_start_and_fetch_state_via_api():
