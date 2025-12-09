@@ -8,10 +8,14 @@ from .domain import Agent, Company, DayReport, GameState
 from .schemas import ManagerAction
 
 try:
+    import httpx
     from supabase import Client, create_client
+    from supabase.client import ClientOptions
 except ImportError:  # pragma: no cover - handled via dependency management
+    httpx = None  # type: ignore
     Client = None  # type: ignore
     create_client = None  # type: ignore
+    ClientOptions = None  # type: ignore
 
 
 class GameRepository(Protocol):
@@ -52,13 +56,14 @@ class SupabaseGameRepository:
     Supabase-backed repository persisting games, companies, agents and actions.
     """
 
-    def __init__(self, supabase_url: str, supabase_key: str) -> None:
-        if Client is None or create_client is None:
+    def __init__(self, supabase_url: str, supabase_key: str, verify_ssl: bool = True) -> None:
+        if Client is None or create_client is None or httpx is None or ClientOptions is None:
             raise RuntimeError("Le client Supabase est manquant; installe supabase via uv.")
         if not supabase_url or not supabase_key:
             raise ValueError("SUPABASE_URL et SUPABASE_KEY sont requis pour activer SupabaseGameRepository")
 
-        self.client: Client = create_client(supabase_url, supabase_key)
+        options = ClientOptions(httpx_client=httpx.Client(verify=verify_ssl))
+        self.client: Client = create_client(supabase_url, supabase_key, options=options)
         self._game_companies: Dict[str, str] = {}
 
     def create(self, state: GameState) -> GameState:
@@ -258,7 +263,7 @@ class SupabaseGameRepository:
             response = query.execute()
         except Exception as exc:  # pragma: no cover - supabase client raises runtime errors
             raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Echec Supabase pendant {context}"
+                status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Echec Supabase pendant {context}: {exc}"
             ) from exc
         error = getattr(response, "error", None)
         if error:

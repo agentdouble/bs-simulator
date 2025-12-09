@@ -21,8 +21,8 @@ def _build_repository(settings) -> GameRepository:
     if supabase_url or supabase_key:
         if not supabase_url or not supabase_key:
             raise ValueError("Configuration Supabase incomplète : fournir SUPABASE_URL et SUPABASE_KEY")
-        logger.info("Stockage Supabase activé")
-        return SupabaseGameRepository(supabase_url, supabase_key)
+        logger.info("Stockage Supabase activé (verify_ssl=%s)", settings.supabase_verify_ssl)
+        return SupabaseGameRepository(supabase_url, supabase_key, verify_ssl=settings.supabase_verify_ssl)
 
     logger.info("Stockage en mémoire (Supabase non configuré)")
     return InMemoryGameRepository()
