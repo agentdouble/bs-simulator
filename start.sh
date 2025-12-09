@@ -17,6 +17,13 @@ require_cmd npm
 
 BACK_PID=""
 FRONT_PID=""
+if [ -f "$BACKEND_DIR/.env" ]; then
+  echo "Chargement des variables depuis backend/.env"
+  set -a
+  # shellcheck source=/dev/null
+  source "$BACKEND_DIR/.env"
+  set +a
+fi
 
 cleanup() {
   echo "Arrêt des services..."

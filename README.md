@@ -18,6 +18,8 @@ Variables d'environnement attendues (voir `backend/.env`):
 - `OPENAI_MODEL` (optionnel, défaut `gpt-4o-mini`)
 - `SUPABASE_URL`, `SUPABASE_KEY` (optionnels)
 
+Le script `start.sh` charge automatiquement `backend/.env` s'il existe.
+
 Ou via le script racine (lance backend + front) :
 
 ```bash
