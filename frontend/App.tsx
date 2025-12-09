@@ -136,7 +136,7 @@ function AgentCard({ agent, onTrain, onSupport }: { agent: Agent; onTrain: () =>
           <Text style={styles.actionText}>Former</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButtonSecondary} onPress={onSupport}>
-          <Text style={styles.actionText}>Supporter</Text>
+          <Text style={[styles.actionText, styles.actionTextSecondary]}>Supporter</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -392,8 +392,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   actionText: {
-    color: "#0b1021",
+    color: "#ffffff",
     fontWeight: "700",
+  },
+  actionTextSecondary: {
+    color: palette.text,
   },
   label: {
     color: palette.text,
