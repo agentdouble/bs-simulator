@@ -31,9 +31,11 @@ cd "$BACKEND_DIR"
 uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000 &
 BACK_PID=$!
 
-echo "Lancement frontend (Expo). API: ${EXPO_PUBLIC_API_URL:-http://localhost:8000}"
+echo "Lancement frontend web (Expo). API: ${EXPO_PUBLIC_API_URL:-http://localhost:8000}"
 cd "$FRONTEND_DIR"
-npm start &
+npm run web &
 FRONT_PID=$!
+
+echo "Front web attendu sur http://localhost:8081"
 
 wait "$BACK_PID" "$FRONT_PID"

@@ -43,6 +43,7 @@ npm start
 ```
 
 L'app appelle l'API en `http://localhost:8000` par défaut. Pour cibler un autre backend, définir `EXPO_PUBLIC_API_URL` avant de démarrer Expo.
+Le script `start.sh` lance Expo en mode web (front accessible sur `http://localhost:8081`).
 
 ## Supabase
 
