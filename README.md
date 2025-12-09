@@ -13,6 +13,11 @@ cd backend
 uv run uvicorn backend.app:app --reload
 ```
 
+Variables d'environnement attendues (voir `backend/.env`):
+- `LLM_MODE` (`local` par défaut, ou `api`)
+- `SUPABASE_URL`, `SUPABASE_KEY`
+- `OPENAI_API_KEY` (pour un provider API externe)
+
 Ou via le script racine (lance backend + front) :
 
 ```bash
