@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+**/__pycache__/
+.venv/
+**/.venv/
+backend/.pytest_cache/
+*.pyc
+
+# Node/Expo
+frontend/node_modules/
+frontend/.expo/
+frontend/.expo-shared/
+frontend/.pnpm-store/
+frontend/dist/
+frontend/.cache/
+
+# OS
+.DS_Store
