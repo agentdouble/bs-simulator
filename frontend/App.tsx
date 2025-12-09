@@ -1,15 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Company = {
   name: string;
@@ -148,6 +139,7 @@ export default function App() {
   const [state, setState] = useState<GameState | null>(null);
   const [report, setReport] = useState<DayReport | null>(null);
   const [pendingActions, setPendingActions] = useState<ManagerAction[]>([]);
+  const [activeTab, setActiveTab] = useState<"summary" | "agents" | "report">("summary");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -201,105 +193,174 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="light" />
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>BS Simulator Dashboard</Text>
-        <Text style={styles.subtitle}>Monte ton équipe d'agents IA et passe les jours en optimisant tes choix.</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>BS Simulator Dashboard</Text>
+          <Text style={styles.subtitle}>
+            Monte ton équipe d'agents IA en gardant toujours une seule page, découpée en sections et onglets, sans scroll infini.
+          </Text>
+        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>Nom de l'entreprise</Text>
-          <TextInput
-            value={companyName}
-            onChangeText={setCompanyName}
-            style={styles.input}
-            placeholder="Ex: Nova Ops"
-            editable={!loading}
-          />
-          <TouchableOpacity style={styles.primaryButton} onPress={handleStart} disabled={loading || companyName.trim().length === 0}>
-            <Text style={styles.primaryText}>{hasGame ? "Relancer une partie" : "Démarrer"}</Text>
-          </TouchableOpacity>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+        <View style={styles.topRow}>
+          <View style={styles.topColumn}>
+            <View style={styles.card}>
+              <Text style={styles.label}>Nom de l'entreprise</Text>
+              <TextInput
+                value={companyName}
+                onChangeText={setCompanyName}
+                style={styles.input}
+                placeholder="Ex: Nova Ops"
+                editable={!loading}
+              />
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleStart}
+                disabled={loading || companyName.trim().length === 0}
+              >
+                <Text style={styles.primaryText}>{hasGame ? "Relancer une partie" : "Démarrer"}</Text>
+              </TouchableOpacity>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+            </View>
+          </View>
+
+          {hasGame && state ? (
+            <View style={styles.topColumn}>
+              <View style={styles.card}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryText}>Jour {state.day}</Text>
+                  <Text style={styles.summaryText}>{state.company.name}</Text>
+                </View>
+                <View style={styles.metricsRow}>
+                  <View style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>Cash</Text>
+                    <Text style={styles.metricValue}>{formatCurrency(state.company.cash)}</Text>
+                  </View>
+                  <View style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>Revenu</Text>
+                    <Text style={styles.metricValue}>{formatCurrency(summary?.revenue ?? 0)}</Text>
+                  </View>
+                  <View style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>Coûts</Text>
+                    <Text style={styles.metricValue}>{formatCurrency(summary?.costs ?? 0)}</Text>
+                  </View>
+                </View>
+                {summary ? (
+                  <Text style={styles.meta}>Résultat net: {formatCurrency(summary.net)}</Text>
+                ) : (
+                  <Text style={styles.meta}>Lance le premier jour pour voir les résultats.</Text>
+                )}
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {hasGame && state ? (
-          <View style={styles.block}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryText}>Jour {state.day}</Text>
-              <Text style={styles.summaryText}>{state.company.name}</Text>
-            </View>
-            <View style={styles.metricsRow}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Cash</Text>
-                <Text style={styles.metricValue}>{formatCurrency(state.company.cash)}</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Revenu</Text>
-                <Text style={styles.metricValue}>{formatCurrency(summary?.revenue ?? 0)}</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Coûts</Text>
-                <Text style={styles.metricValue}>{formatCurrency(summary?.costs ?? 0)}</Text>
-              </View>
+          <>
+            <View style={styles.tabBar}>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === "summary" && styles.tabButtonActive]}
+                onPress={() => setActiveTab("summary")}
+              >
+                <Text style={[styles.tabButtonText, activeTab === "summary" && styles.tabButtonTextActive]}>Synthèse</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === "agents" && styles.tabButtonActive]}
+                onPress={() => setActiveTab("agents")}
+              >
+                <Text style={[styles.tabButtonText, activeTab === "agents" && styles.tabButtonTextActive]}>Agents</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === "report" && styles.tabButtonActive]}
+                onPress={() => setActiveTab("report")}
+              >
+                <Text style={[styles.tabButtonText, activeTab === "report" && styles.tabButtonTextActive]}>Rapport</Text>
+              </TouchableOpacity>
             </View>
 
-            <Text style={styles.sectionTitle}>Actions en attente ({pendingActions.length})</Text>
-            <View style={styles.card}>
-              {pendingActions.length === 0 ? (
-                <Text style={styles.meta}>Choisis des actions pour tes agents.</Text>
-              ) : (
-                pendingActions.map((action, idx) => (
-                  <Text key={`${action.agent_id}-${idx}`} style={styles.meta}>
-                    • {action.action} ({action.focus ?? "n/a"})
-                  </Text>
-                ))
+            <View style={styles.tabContent}>
+              {activeTab === "summary" && (
+                <View style={styles.block}>
+                  <Text style={styles.sectionTitle}>Actions en attente ({pendingActions.length})</Text>
+                  <View style={styles.card}>
+                    {pendingActions.length === 0 ? (
+                      <Text style={styles.meta}>Choisis des actions pour tes agents.</Text>
+                    ) : (
+                      pendingActions.map((action, idx) => (
+                        <Text key={`${action.agent_id}-${idx}`} style={styles.meta}>
+                          • {action.action} ({action.focus ?? "n/a"})
+                        </Text>
+                      ))
+                    )}
+                    <View style={styles.actionsRow}>
+                      <TouchableOpacity style={styles.primaryButton} onPress={handleRunDay} disabled={loading}>
+                        <Text style={styles.primaryText}>Passer au jour suivant</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.secondaryButton}
+                        onPress={() => setPendingActions([])}
+                        disabled={loading}
+                      >
+                        <Text style={styles.secondaryText}>Vider</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {loading ? <ActivityIndicator color="#f1f3f5" style={{ marginTop: 8 }} /> : null}
+                  </View>
+                </View>
               )}
-              <View style={styles.actionsRow}>
-                <TouchableOpacity style={styles.primaryButton} onPress={handleRunDay} disabled={loading}>
-                  <Text style={styles.primaryText}>Passer au jour suivant</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.secondaryButton} onPress={() => setPendingActions([])} disabled={loading}>
-                  <Text style={styles.secondaryText}>Vider</Text>
-                </TouchableOpacity>
-              </View>
-              {loading ? <ActivityIndicator color="#f1f3f5" style={{ marginTop: 8 }} /> : null}
+
+              {activeTab === "agents" && (
+                <View style={styles.block}>
+                  <Text style={styles.sectionTitle}>Agents IA</Text>
+                  <View style={styles.agentsGrid}>
+                    {state.agents.map((agent) => (
+                      <View key={agent.id} style={styles.agentItem}>
+                        <AgentCard
+                          agent={agent}
+                          onTrain={() => handleTrain(agent)}
+                          onSupport={() => handleSupport(agent)}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {activeTab === "report" && (
+                <View style={styles.block}>
+                  <Text style={styles.sectionTitle}>Rapport du jour</Text>
+                  {report ? (
+                    <View style={styles.card}>
+                      <Text style={styles.cardTitle}>État du jour {report.day}</Text>
+                      <Text style={styles.meta}>Résultats: {formatCurrency(report.results.net)} net</Text>
+                      <Text style={styles.sectionTitleSmall}>Situation des agents</Text>
+                      {report.agent_situation.map((agent) => (
+                        <Text key={agent.agent_id} style={styles.meta}>
+                          • {agent.name}: mot {agent.motivation.toFixed(0)} | stab {agent.stability.toFixed(0)} | prod{" "}
+                          {agent.productivity}
+                        </Text>
+                      ))}
+                      <Text style={styles.sectionTitleSmall}>Impact des décisions</Text>
+                      {report.decisions_impact.map((item, idx) => (
+                        <Text key={`${item}-${idx}`} style={styles.meta}>
+                          • {item}
+                        </Text>
+                      ))}
+                      <Text style={styles.sectionTitleSmall}>Recommandations</Text>
+                      {report.recommendations.map((item, idx) => (
+                        <Text key={`${item}-${idx}`} style={styles.meta}>
+                          • {item}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.meta}>Le rapport sera disponible après le premier jour.</Text>
+                  )}
+                </View>
+              )}
             </View>
-
-            <Text style={styles.sectionTitle}>Agents IA</Text>
-            {state.agents.map((agent) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                onTrain={() => handleTrain(agent)}
-                onSupport={() => handleSupport(agent)}
-              />
-            ))}
-
-            {report ? (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>État du jour {report.day}</Text>
-                <Text style={styles.meta}>Résultats: {formatCurrency(report.results.net)} net</Text>
-                <Text style={styles.sectionTitleSmall}>Situation des agents</Text>
-                {report.agent_situation.map((agent) => (
-                  <Text key={agent.agent_id} style={styles.meta}>
-                    • {agent.name}: mot {agent.motivation.toFixed(0)} | stab {agent.stability.toFixed(0)} | prod {agent.productivity}
-                  </Text>
-                ))}
-                <Text style={styles.sectionTitleSmall}>Impact des décisions</Text>
-                {report.decisions_impact.map((item, idx) => (
-                  <Text key={`${item}-${idx}`} style={styles.meta}>
-                    • {item}
-                  </Text>
-                ))}
-                <Text style={styles.sectionTitleSmall}>Recommandations</Text>
-                {report.recommendations.map((item, idx) => (
-                  <Text key={`${item}-${idx}`} style={styles.meta}>
-                    • {item}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-          </View>
+          </>
         ) : null}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -322,19 +383,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingBottom: 16,
   },
-  scrollContent: {
-    paddingBottom: 32,
+  header: {
+    marginTop: 12,
+    marginBottom: 8,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
     color: palette.text,
-    marginTop: 12,
   },
   subtitle: {
     color: palette.muted,
-    marginBottom: 16,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  topRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "stretch",
+    flexWrap: "wrap",
+  },
+  topColumn: {
+    flex: 1,
+    minWidth: 280,
   },
   block: {
     gap: 12,
@@ -477,5 +550,42 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontWeight: "700",
     marginTop: 8,
+  },
+  tabBar: {
+    flexDirection: "row",
+    alignSelf: "flex-start",
+    backgroundColor: "#ececec",
+    borderRadius: 999,
+    padding: 4,
+    marginTop: 16,
+  },
+  tabButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  tabButtonActive: {
+    backgroundColor: palette.accent,
+  },
+  tabButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: palette.muted,
+  },
+  tabButtonTextActive: {
+    color: "#ffffff",
+  },
+  tabContent: {
+    flex: 1,
+    marginTop: 12,
+  },
+  agentsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  agentItem: {
+    flexBasis: "48%",
+    minWidth: 260,
   },
 });
