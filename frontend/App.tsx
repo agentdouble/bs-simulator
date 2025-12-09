@@ -195,7 +195,37 @@ export default function App() {
       <StatusBar style="light" />
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>BS Simulator Dashboard</Text>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.title}>BS Simulator Dashboard</Text>
+            {hasGame && state ? (
+              <View style={styles.tabBar}>
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === "summary" && styles.tabButtonActive]}
+                  onPress={() => setActiveTab("summary")}
+                >
+                  <Text style={[styles.tabButtonText, activeTab === "summary" && styles.tabButtonTextActive]}>
+                    Synthèse
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === "agents" && styles.tabButtonActive]}
+                  onPress={() => setActiveTab("agents")}
+                >
+                  <Text style={[styles.tabButtonText, activeTab === "agents" && styles.tabButtonTextActive]}>
+                    Agents
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === "report" && styles.tabButtonActive]}
+                  onPress={() => setActiveTab("report")}
+                >
+                  <Text style={[styles.tabButtonText, activeTab === "report" && styles.tabButtonTextActive]}>
+                    Rapport
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.subtitle}>
             Monte ton équipe d'agents IA en gardant toujours une seule page, découpée en sections et onglets, sans scroll infini.
           </Text>
@@ -255,29 +285,7 @@ export default function App() {
         </View>
 
         {hasGame && state ? (
-          <>
-            <View style={styles.tabBar}>
-              <TouchableOpacity
-                style={[styles.tabButton, activeTab === "summary" && styles.tabButtonActive]}
-                onPress={() => setActiveTab("summary")}
-              >
-                <Text style={[styles.tabButtonText, activeTab === "summary" && styles.tabButtonTextActive]}>Synthèse</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabButton, activeTab === "agents" && styles.tabButtonActive]}
-                onPress={() => setActiveTab("agents")}
-              >
-                <Text style={[styles.tabButtonText, activeTab === "agents" && styles.tabButtonTextActive]}>Agents</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabButton, activeTab === "report" && styles.tabButtonActive]}
-                onPress={() => setActiveTab("report")}
-              >
-                <Text style={[styles.tabButtonText, activeTab === "report" && styles.tabButtonTextActive]}>Rapport</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.tabContent}>
+          <View style={styles.tabContent}>
               {activeTab === "summary" && (
                 <View style={styles.block}>
                   <Text style={styles.sectionTitle}>Actions en attente ({pendingActions.length})</Text>
@@ -357,8 +365,7 @@ export default function App() {
                   )}
                 </View>
               )}
-            </View>
-          </>
+          </View>
         ) : null}
       </View>
     </SafeAreaView>
@@ -388,6 +395,12 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 12,
     marginBottom: 8,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   title: {
     fontSize: 26,
@@ -557,7 +570,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ececec",
     borderRadius: 999,
     padding: 4,
-    marginTop: 16,
+    marginTop: 0,
   },
   tabButton: {
     paddingVertical: 6,
