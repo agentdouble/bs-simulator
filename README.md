@@ -1,6 +1,6 @@
 # BS Simulator
 
-MVP d'un simulateur d'entreprise où les employés sont des agents IA. Le projet est découpé en deux dossiers :
+MVP d'un simulateur d'entreprise où les employés sont modélisés comme des effectifs (personnes). Le projet est découpé en deux dossiers :
 
 - `backend/` : API FastAPI (Python, gérée avec `uv`).
 - `frontend/` : app React Native (Expo) pour piloter le dashboard.
@@ -10,7 +10,7 @@ MVP d'un simulateur d'entreprise où les employés sont des agents IA. Le projet
 
 ```bash
 cd backend
-uv run uvicorn backend.app:app --reload
+uv run uvicorn backend.app:app --reload --port 8055
 ```
 
 Variables d'environnement attendues (voir `backend/.env`):
@@ -27,7 +27,7 @@ Ou via le script racine (lance backend + front) :
 ```
 
 Endpoints principaux :
-- `POST /game/start` : crée une partie et génère les premiers agents IA.
+- `POST /game/start` : crée une partie et génère les premiers effectifs.
 - `POST /game/action` : applique les décisions du gérant pour le jour en cours et retourne l'état du jour.
 - `GET /game/state/{game_id}` : récupère l'état courant.
 
@@ -47,9 +47,9 @@ cd frontend
 npm start
 ```
 
-L'app appelle l'API en `http://localhost:8000` par défaut. Pour cibler un autre backend, définir `EXPO_PUBLIC_API_URL` avant de démarrer Expo.
-Le script `start.sh` lance Expo en mode web (front accessible sur `http://localhost:8081`).  
-L'interface web est pensée pour tenir sur une seule page, découpée en sections avec onglets (Synthèse, Agents, Finance, Rapport), sans scroll infini.
+L'app appelle l'API en `http://localhost:8055` par défaut. Pour cibler un autre backend, définir `EXPO_PUBLIC_API_URL` avant de démarrer Expo.
+Le script `start.sh` lance Expo en mode web (front accessible sur `http://localhost:8056`).  
+L'interface web est pensée pour tenir sur une seule page, découpée en sections avec onglets (Synthèse, Effectifs, Finance, Rapport), sans scroll infini.
 
 ## Supabase
 
@@ -59,4 +59,4 @@ Le schéma minimal se trouve dans `infra/supabase/schema.sql`. Une implémentati
 
 - `backend/src/backend/service.py` : moteur de jeu (génération d'agents, application des actions, calcul des résultats).
 - `backend/src/backend/llm.py` : interface LLM connectée à l'API OpenAI.
-- `frontend/App.tsx` : écrans dashboard + actions rapides sur les agents.
+- `frontend/App.tsx` : écrans dashboard + actions rapides sur les effectifs (personnes).

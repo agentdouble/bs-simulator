@@ -33,16 +33,16 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-echo "Lancement backend (FastAPI) sur http://localhost:8000"
+echo "Lancement backend (FastAPI) sur http://localhost:8055"
 cd "$BACKEND_DIR"
-uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000 &
+uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 8055 &
 BACK_PID=$!
 
-echo "Lancement frontend web (Expo). API: ${EXPO_PUBLIC_API_URL:-http://localhost:8000}"
+echo "Lancement frontend web (Expo). API: ${EXPO_PUBLIC_API_URL:-http://localhost:8055}"
 cd "$FRONTEND_DIR"
 npm run web &
 FRONT_PID=$!
 
-echo "Front web attendu sur http://localhost:8081"
+echo "Front web attendu sur http://localhost:8056"
 
 wait "$BACK_PID" "$FRONT_PID"

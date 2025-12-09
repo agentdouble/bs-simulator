@@ -73,7 +73,7 @@ type ActionResponse = {
   report: DayReport;
 };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8055";
 
 async function startGame(companyName: string): Promise<StartResponse> {
   const res = await fetch(`${API_BASE_URL}/game/start`, {
@@ -221,7 +221,7 @@ export default function App() {
                     onPress={() => setActiveTab("agents")}
                   >
                     <Text style={[styles.tabButtonText, activeTab === "agents" && styles.tabButtonTextActive]}>
-                      Agents
+                      Effectifs
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -310,7 +310,7 @@ export default function App() {
 
               {activeTab === "agents" && (
                 <View style={styles.block}>
-                  <Text style={styles.sectionTitle}>Agents IA</Text>
+                  <Text style={styles.sectionTitle}>Effectifs</Text>
                   <View style={styles.agentsGrid}>
                     {state.agents.map((agent) => (
                       <View key={agent.id} style={styles.agentItem}>
