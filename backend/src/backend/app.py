@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .llm import get_llm_engine
-from .repositories import InMemoryGameRepository
+from .repositories import GameRepository, InMemoryGameRepository, SupabaseGameRepository
 from .schemas import ActionRequest, ActionResponse, GameStateResponse, StartGameRequest, StartGameResponse
 from .service import GameService
 
@@ -14,7 +14,21 @@ logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(na
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
-repository = InMemoryGameRepository()
+
+
+def _build_repository(settings) -> GameRepository:
+    supabase_url, supabase_key = settings.supabase_url, settings.supabase_key
+    if supabase_url or supabase_key:
+        if not supabase_url or not supabase_key:
+            raise ValueError("Configuration Supabase incomplète : fournir SUPABASE_URL et SUPABASE_KEY")
+        logger.info("Stockage Supabase activé")
+        return SupabaseGameRepository(supabase_url, supabase_key)
+
+    logger.info("Stockage en mémoire (Supabase non configuré)")
+    return InMemoryGameRepository()
+
+
+repository = _build_repository(settings)
 llm_engine = get_llm_engine(settings)
 service = GameService(repository, llm_engine)
 

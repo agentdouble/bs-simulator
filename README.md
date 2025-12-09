@@ -53,7 +53,10 @@ L'interface web est pensée pour tenir sur une seule page, découpée en section
 
 ## Supabase
 
-Le schéma minimal se trouve dans `infra/supabase/schema.sql`. Une implémentation `SupabaseGameRepository` est prévue mais non branchée dans le MVP pour rester léger. Configure `SUPABASE_URL` et `SUPABASE_KEY` côté backend quand l'intégration sera activée.
+Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont fournis (sinon stockage en mémoire, cela est loggué au démarrage). Les tables attendues sont décrites dans `infra/supabase/schema.sql` (`companies`, `agents`, `game_states`, `manager_actions`). Applique ce script sur ton projet (SQL Editor Supabase ou CLI/`psql` selon ta stack).
+
+- Variables côté backend : `SUPABASE_URL` (API URL) et `SUPABASE_KEY` (clé service ou anon selon tes règles).
+- Sauvegardes effectuées : état de partie dans `game_states` (rapport inclus), synchro de l'entreprise et des agents, journal des actions manager dans `manager_actions` avec le jour concerné.
 
 ## Structure
 

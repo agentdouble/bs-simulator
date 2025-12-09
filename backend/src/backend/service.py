@@ -46,6 +46,7 @@ class GameService:
     def apply_actions(self, payload: ActionRequest) -> Tuple[GameState, DayReport]:
         state = self.repository.get(payload.game_id)
         updated_agents, decisions_impact, variable_costs = self._apply_actions(state.agents, payload.actions)
+        action_day = state.day
 
         next_state = GameState(
             game_id=state.game_id,
@@ -57,7 +58,7 @@ class GameService:
 
         report = self._build_report(next_state, decisions_impact=decisions_impact, extra_costs=variable_costs)
         next_state.last_report = report
-        self.repository.save(next_state)
+        self.repository.save(next_state, payload.actions, action_day=action_day)
         logger.info("Etat jour %s enregistré pour %s", report.day, payload.game_id)
         return next_state, report
 
