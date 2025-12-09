@@ -139,7 +139,7 @@ export default function App() {
   const [state, setState] = useState<GameState | null>(null);
   const [report, setReport] = useState<DayReport | null>(null);
   const [pendingActions, setPendingActions] = useState<ManagerAction[]>([]);
-  const [activeTab, setActiveTab] = useState<"summary" | "agents" | "finance" | "report">("summary");
+  const [activeTab, setActiveTab] = useState<"game" | "summary" | "agents" | "finance" | "report">("game");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -201,6 +201,14 @@ export default function App() {
               {hasGame && state ? (
                 <View style={styles.tabBar}>
                   <TouchableOpacity
+                    style={[styles.tabButton, activeTab === "game" && styles.tabButtonActive]}
+                    onPress={() => setActiveTab("game")}
+                  >
+                    <Text style={[styles.tabButtonText, activeTab === "game" && styles.tabButtonTextActive]}>
+                      Partie
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[styles.tabButton, activeTab === "summary" && styles.tabButtonActive]}
                     onPress={() => setActiveTab("summary")}
                   >
@@ -241,7 +249,7 @@ export default function App() {
           </View>
         </View>
 
-        {!hasGame && (
+        {activeTab === "game" && (
           <View style={styles.topRow}>
             <View style={styles.topColumn}>
               <View style={styles.card}>
@@ -318,25 +326,6 @@ export default function App() {
               {activeTab === "finance" && (
                 <View style={styles.block}>
                   <Text style={styles.sectionTitle}>Finance</Text>
-                  <View style={styles.card}>
-                    <Text style={styles.label}>Nom de l'entreprise</Text>
-                    <TextInput
-                      value={companyName}
-                      onChangeText={setCompanyName}
-                      style={styles.input}
-                      placeholder="Ex: Nova Ops"
-                      editable={!loading}
-                    />
-                    <TouchableOpacity
-                      style={styles.primaryButton}
-                      onPress={handleStart}
-                      disabled={loading || companyName.trim().length === 0}
-                    >
-                      <Text style={styles.primaryText}>{hasGame ? "Relancer une partie" : "Démarrer"}</Text>
-                    </TouchableOpacity>
-                    {error ? <Text style={styles.error}>{error}</Text> : null}
-                  </View>
-
                   {summary ? (
                     <View style={styles.card}>
                       <View style={styles.summaryRow}>
