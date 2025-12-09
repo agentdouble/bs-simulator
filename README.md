@@ -4,7 +4,6 @@ MVP d'un simulateur d'entreprise où les employés sont modélisés comme des ef
 
 - `backend/` : API FastAPI (Python, gérée avec `uv`).
 - `frontend/` : app React Native (Expo) pour piloter le dashboard.
-- `infra/supabase/` : schéma initial pour stocker les parties dans Supabase.
 
 ## Lancer le backend
 
@@ -53,7 +52,7 @@ L'interface web est pensée pour tenir sur une seule page, découpée en section
 
 ## Supabase
 
-Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont fournis (sinon stockage en mémoire, cela est loggué au démarrage). Les tables attendues sont décrites dans `infra/supabase/schema.sql` (`companies`, `agents`, `game_states`, `manager_actions`). Applique ce script sur ton projet (SQL Editor Supabase ou CLI/`psql` selon ta stack).
+Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont fournis (sinon stockage en mémoire, cela est loggué au démarrage). Les tables attendues côté base sont : `companies`, `agents`, `game_states`, `manager_actions`. Le schéma est maintenu directement dans ton projet Supabase (plus de fichier SQL dans le repo).
 
 - Variables côté backend : `SUPABASE_URL` (API URL) et `SUPABASE_KEY` (clé service ou anon selon tes règles).
 - En environnement filtré/SSL intercepté, tu peux poser `SUPABASE_VERIFY_SSL=false` pour autoriser un certificat non signé (défaut: true).
