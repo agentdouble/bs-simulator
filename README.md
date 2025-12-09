@@ -16,6 +16,7 @@ Variables d'environnement attendues (voir `backend/.env`):
 - `OPENAI_API_KEY` (obligatoire pour le LLM OpenAI)
 - `OPENAI_MODEL` (optionnel, défaut `gpt-4o-mini`)
 - `SUPABASE_URL`, `SUPABASE_KEY` (optionnels)
+- `SUPABASE_VERIFY_SSL` (optionnel, défaut `true`, à passer à `false` si un proxy TLS intercepte les certificats)
 
 Le script `start.sh` charge automatiquement `backend/.env` s'il existe.
 
