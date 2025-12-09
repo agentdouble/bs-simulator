@@ -244,7 +244,9 @@ export default function App() {
               ) : null}
             </View>
             {hasGame && state ? (
-              <Text style={styles.headerCash}>Cash: {formatCurrency(state.company.cash)}</Text>
+              <Text style={styles.headerCash}>
+                Cash: {formatCurrency(state.company.cash)} · Employés: {state.agents.length}
+              </Text>
             ) : null}
           </View>
         </View>
