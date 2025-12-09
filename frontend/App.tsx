@@ -139,7 +139,7 @@ export default function App() {
   const [state, setState] = useState<GameState | null>(null);
   const [report, setReport] = useState<DayReport | null>(null);
   const [pendingActions, setPendingActions] = useState<ManagerAction[]>([]);
-  const [activeTab, setActiveTab] = useState<"summary" | "agents" | "report">("summary");
+  const [activeTab, setActiveTab] = useState<"summary" | "agents" | "finance" | "report">("summary");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -196,34 +196,47 @@ export default function App() {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
-            <Text style={styles.title}>BS</Text>
+            <View style={styles.headerLeft}>
+              <Text style={styles.title}>BS</Text>
+              {hasGame && state ? (
+                <View style={styles.tabBar}>
+                  <TouchableOpacity
+                    style={[styles.tabButton, activeTab === "summary" && styles.tabButtonActive]}
+                    onPress={() => setActiveTab("summary")}
+                  >
+                    <Text style={[styles.tabButtonText, activeTab === "summary" && styles.tabButtonTextActive]}>
+                      Synthèse
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tabButton, activeTab === "agents" && styles.tabButtonActive]}
+                    onPress={() => setActiveTab("agents")}
+                  >
+                    <Text style={[styles.tabButtonText, activeTab === "agents" && styles.tabButtonTextActive]}>
+                      Agents
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tabButton, activeTab === "finance" && styles.tabButtonActive]}
+                    onPress={() => setActiveTab("finance")}
+                  >
+                    <Text style={[styles.tabButtonText, activeTab === "finance" && styles.tabButtonTextActive]}>
+                      Finance
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tabButton, activeTab === "report" && styles.tabButtonActive]}
+                    onPress={() => setActiveTab("report")}
+                  >
+                    <Text style={[styles.tabButtonText, activeTab === "report" && styles.tabButtonTextActive]}>
+                      Rapport
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
             {hasGame && state ? (
-              <View style={styles.tabBar}>
-                <TouchableOpacity
-                  style={[styles.tabButton, activeTab === "summary" && styles.tabButtonActive]}
-                  onPress={() => setActiveTab("summary")}
-                >
-                  <Text style={[styles.tabButtonText, activeTab === "summary" && styles.tabButtonTextActive]}>
-                    Synthèse
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.tabButton, activeTab === "agents" && styles.tabButtonActive]}
-                  onPress={() => setActiveTab("agents")}
-                >
-                  <Text style={[styles.tabButtonText, activeTab === "agents" && styles.tabButtonTextActive]}>
-                    Agents
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.tabButton, activeTab === "report" && styles.tabButtonActive]}
-                  onPress={() => setActiveTab("report")}
-                >
-                  <Text style={[styles.tabButtonText, activeTab === "report" && styles.tabButtonTextActive]}>
-                    Rapport
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.headerCash}>Cash: {formatCurrency(state.company.cash)}</Text>
             ) : null}
           </View>
         </View>
@@ -330,6 +343,25 @@ export default function App() {
                 </View>
               )}
 
+              {activeTab === "finance" && (
+                <View style={styles.block}>
+                  <Text style={styles.sectionTitle}>Finance</Text>
+                  {summary ? (
+                    <View style={styles.card}>
+                      <Text style={styles.meta}>Revenu: {formatCurrency(summary.revenue)}</Text>
+                      <Text style={styles.meta}>Coûts: {formatCurrency(summary.costs)}</Text>
+                      <Text style={styles.meta}>Résultat net: {formatCurrency(summary.net)}</Text>
+                      <Text style={styles.sectionTitleSmall}>Indicateurs opérationnels</Text>
+                      <Text style={styles.meta}>Clients: {summary.clients}</Text>
+                      <Text style={styles.meta}>Innovations: {summary.innovations}</Text>
+                      <Text style={styles.meta}>Incidents: {summary.errors}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.meta}>Les chiffres financiers apparaîtront après le premier jour.</Text>
+                  )}
+                </View>
+              )}
+
               {activeTab === "report" && (
                 <View style={styles.block}>
                   <Text style={styles.sectionTitle}>Rapport du jour</Text>
@@ -396,13 +428,22 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
     color: palette.text,
+  },
+  headerCash: {
+    fontSize: 13,
+    color: palette.muted,
   },
   subtitle: {
     color: palette.muted,
