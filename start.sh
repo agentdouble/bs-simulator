@@ -36,4 +36,4 @@ cd "$FRONTEND_DIR"
 npm start &
 FRONT_PID=$!
 
-wait -n "$BACK_PID" "$FRONT_PID"
+wait "$BACK_PID" "$FRONT_PID"
