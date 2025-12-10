@@ -12,8 +12,30 @@ require_cmd() {
   fi
 }
 
+free_port() {
+  local port="$1"
+  local pids
+  pids=$(lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null || true)
+  if [ -n "$pids" ]; then
+    echo "Port $port occupé par PID(s): $pids — arrêt"
+    kill $pids 2>/dev/null || true
+    sleep 1
+    # Forcer si nécessaire
+    pids=$(lsof -ti tcp:"$port" 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+      kill -9 $pids 2>/dev/null || true
+    fi
+  fi
+}
+
 require_cmd uv
 require_cmd npm
+
+echo "Installation des dépendances backend (uv sync --frozen)"
+(cd "$BACKEND_DIR" && uv sync --frozen)
+
+echo "Installation des dépendances frontend (npm install)"
+(cd "$FRONTEND_DIR" && npm install)
 
 BACK_PID=""
 FRONT_PID=""
@@ -31,7 +53,17 @@ cleanup() {
   [[ -n "$FRONT_PID" ]] && kill "$FRONT_PID" 2>/dev/null || true
 }
 
-trap cleanup EXIT INT TERM
+stop_script() {
+  trap - EXIT
+  cleanup
+  exit 0
+}
+
+trap cleanup EXIT
+trap stop_script INT TERM
+
+free_port 8055
+free_port 8056
 
 echo "Lancement backend (FastAPI) sur http://localhost:8055"
 cd "$BACKEND_DIR"

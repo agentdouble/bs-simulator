@@ -30,6 +30,8 @@ Ou via le script racine (lance backend + front) :
 ./start.sh
 ```
 
+Le script `start.sh` installe automatiquement les dépendances (`uv sync --frozen` côté backend, `npm install` côté frontend) et libère les ports 8055/8056 avant de lancer les services.
+
 Endpoints principaux :
 - `POST /game/start` : crée une partie et génère les premiers effectifs.
 - `POST /game/action` : applique les décisions du gérant pour le jour en cours et retourne l'état du jour.
