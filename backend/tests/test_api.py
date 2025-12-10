@@ -12,6 +12,9 @@ class StubLLMEngine(LLMEngine):
     def generate_recommendations(self, state, report):
         return ["Recommandation via stub"]
 
+    def generate_persona_prompt(self, agent, company_name):
+        return f"Persona {agent.name}"
+
 
 app_module.llm_engine = StubLLMEngine()
 app_module.service.llm_engine = app_module.llm_engine
@@ -23,6 +26,7 @@ def test_start_and_fetch_state_via_api():
     assert response.status_code == 200
     data = response.json()
     game_id = data["state"]["game_id"]
+    assert data["state"]["agents"][0]["persona_prompt"].startswith("Persona")
 
     fetch = client.get(f"/game/state/{game_id}")
     assert fetch.status_code == 200

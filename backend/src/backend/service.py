@@ -34,6 +34,7 @@ class GameService:
 
     def start_game(self, payload: StartGameRequest) -> GameState:
         state = create_initial_state(payload.company_name, rng=self.rng)
+        state.agents = self._generate_personas(state.agents, state.company.name)
         report = self._build_report(state, decisions_impact=["Entreprise créée"], extra_costs=0.0)
         state.last_report = report
         self.repository.create(state)
@@ -139,6 +140,14 @@ class GameService:
         recommendations = self.llm_engine.generate_recommendations(state, report)
         report.recommendations = recommendations
         return report
+
+    def _generate_personas(self, agents: List[Agent], company_name: str) -> List[Agent]:
+        personas: List[Agent] = []
+        for agent in agents:
+            prompt = self.llm_engine.generate_persona_prompt(agent, company_name)
+            personas.append(agent.copy_with_updates(persona_prompt=prompt))
+        logger.info("Personnalités générées pour %s agents", len(personas))
+        return personas
 
     def _compute_results(self, agents: List[Agent], extra_costs: float) -> BusinessResults:
         revenue = 0.0

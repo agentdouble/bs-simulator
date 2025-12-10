@@ -8,6 +8,9 @@ class StubLLMEngine(LLMEngine):
     def generate_recommendations(self, state, report):
         return ["Recommandation test"]
 
+    def generate_persona_prompt(self, agent, company_name):
+        return f"Persona {agent.name}"
+
 
 def test_start_game_creates_state():
     service = GameService(InMemoryGameRepository(), StubLLMEngine())
@@ -18,6 +21,7 @@ def test_start_game_creates_state():
     assert len(state.agents) >= 3
     assert state.last_report is not None
     assert state.company.name == "Nova Corp"
+    assert all(agent.persona_prompt for agent in state.agents)
 
 
 def test_apply_actions_updates_day_and_agents():

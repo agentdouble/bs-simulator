@@ -70,6 +70,7 @@ class SupabaseGameRepository:
         company_id = self._insert_company(state.company)
         self._game_companies[state.game_id] = company_id
         self._upsert_agents(company_id, state.agents)
+        self._upsert_personas(state.game_id, state.agents)
         self._insert_game_state(state, company_id)
         return state
 
@@ -80,9 +81,10 @@ class SupabaseGameRepository:
 
         company_row = self._fetch_company(company_id)
         agents_rows = self._fetch_agents(company_id)
+        personas = self._fetch_personas(game_id)
 
         company = self._deserialize_company(company_row)
-        agents = [self._deserialize_agent(agent_row) for agent_row in agents_rows]
+        agents = [self._deserialize_agent(agent_row, personas.get(str(agent_row["id"]))) for agent_row in agents_rows]
         report = DayReport(**row["report"]) if row.get("report") else None
 
         return GameState(
@@ -98,7 +100,7 @@ class SupabaseGameRepository:
     ) -> GameState:
         company_id = self._get_company_id(state.game_id)
         self._update_company(company_id, state.company)
-        self._sync_agents(company_id, state.agents)
+        self._sync_agents(company_id, state.game_id, state.agents)
         self._insert_game_state(state, company_id)
         if actions:
             self._insert_manager_actions(state.game_id, action_day or state.day, actions)
@@ -166,7 +168,7 @@ class SupabaseGameRepository:
         payload = [self._serialize_agent(agent, company_id) for agent in agents]
         self._execute(self.client.table("agents").upsert(payload), "sauvegarde des agents")
 
-    def _sync_agents(self, company_id: str, agents: List[Agent]) -> None:
+    def _sync_agents(self, company_id: str, game_id: str, agents: List[Agent]) -> None:
         existing = self._execute(
             self.client.table("agents").select("id").eq("company_id", company_id),
             "récupération des agents existants",
@@ -179,7 +181,9 @@ class SupabaseGameRepository:
                 self.client.table("agents").delete().in_("id", to_delete),
                 "suppression des agents supprimés",
             )
+            self._delete_personas(game_id, to_delete)
         self._upsert_agents(company_id, agents)
+        self._upsert_personas(game_id, agents)
 
     def _fetch_agents(self, company_id: str) -> List[dict]:
         response = self._execute(
@@ -234,7 +238,7 @@ class SupabaseGameRepository:
             "stability": agent.stability,
         }
 
-    def _deserialize_agent(self, row: dict) -> Agent:
+    def _deserialize_agent(self, row: dict, persona_prompt: str | None = None) -> Agent:
         return Agent(
             id=str(row["id"]),
             name=row["name"],
@@ -248,6 +252,36 @@ class SupabaseGameRepository:
             traits=row["traits"],
             motivation=float(row.get("motivation", 0)),
             stability=float(row.get("stability", 0)),
+            persona_prompt=persona_prompt,
+        )
+
+    def _fetch_personas(self, game_id: str) -> Dict[str, str]:
+        response = self._execute(
+            self.client.table("agent_personas").select("agent_id,prompt").eq("game_id", game_id),
+            "lecture des prompts agents",
+        )
+        rows = response.data or []
+        return {str(row["agent_id"]): row["prompt"] for row in rows if row.get("prompt")}
+
+    def _upsert_personas(self, game_id: str, agents: List[Agent]) -> None:
+        payload = [
+            {"game_id": game_id, "agent_id": agent.id, "prompt": agent.persona_prompt}
+            for agent in agents
+            if agent.persona_prompt
+        ]
+        if not payload:
+            return
+        self._execute(
+            self.client.table("agent_personas").upsert(payload, on_conflict="agent_id"),
+            "sauvegarde des prompts agents",
+        )
+
+    def _delete_personas(self, game_id: str, agent_ids: List[str]) -> None:
+        if not agent_ids:
+            return
+        self._execute(
+            self.client.table("agent_personas").delete().eq("game_id", game_id).in_("agent_id", agent_ids),
+            "suppression des prompts agents",
         )
 
     def _deserialize_company(self, row: dict) -> Company:

@@ -23,6 +23,7 @@ class Agent(BaseModel):
     traits: List[str]
     motivation: float = Field(ge=0, le=100, default=65)
     stability: float = Field(ge=0, le=100, default=70)
+    persona_prompt: Optional[str] = None
 
     def copy_with_updates(self, **kwargs: object) -> "Agent":
         data = self.model_dump()

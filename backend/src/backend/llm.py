@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from typing import List
 
-import logging
-from openai import OpenAI
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 
 from .config import Settings
-from .domain import DayReport, GameState
+from .domain import Agent, DayReport, GameState
 
 logger = logging.getLogger(__name__)
 
@@ -17,40 +19,23 @@ class LLMEngine(ABC):
     def generate_recommendations(self, state: GameState, report: DayReport) -> List[str]:
         raise NotImplementedError
 
+    @abstractmethod
+    def generate_persona_prompt(self, agent: Agent, company_name: str) -> str:
+        raise NotImplementedError
 
-class ApiLLMEngine(LLMEngine):
+
+class LangChainLLMEngine(LLMEngine):
     def __init__(self, api_key: str, model: str) -> None:
-        self.client = OpenAI(api_key=api_key)
-        self.model = model
+        self.recommendation_chain = self._build_recommendation_chain(api_key, model)
+        self.persona_chain = self._build_persona_chain(api_key, model)
 
     def generate_recommendations(self, state: GameState, report: DayReport) -> List[str]:
-        prompt = self._build_prompt(state, report)
+        context = self._build_recommendation_context(state, report)
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Tu es directeur des opérations d'une startup SaaS. "
-                            "Produis des recommandations tactiques, courtes et actionnables en français."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
-                temperature=0.35,
-                max_tokens=320,
-            )
-        except Exception as exc:  # openai library already normalises errors
-            logger.exception("Echec lors de l'appel LLM externe")
-            raise RuntimeError("Echec de génération de recommandations via l'API LLM") from exc
-
-        message = response.choices[0].message.content if response.choices else None
-        if not message:
-            raise RuntimeError("Réponse LLM vide")
+            message = self.recommendation_chain.invoke({"context": context})
+        except Exception as exc:
+            logger.exception("Echec LangChain lors de la génération des recommandations")
+            raise RuntimeError("Echec de génération de recommandations via LangChain") from exc
 
         recommendations = [line.lstrip("-• ").strip() for line in message.splitlines() if line.strip()]
         if not recommendations:
@@ -59,7 +44,28 @@ class ApiLLMEngine(LLMEngine):
         logger.info("Recommandations LLM générées pour le jour %s", report.day)
         return recommendations[:4]
 
-    def _build_prompt(self, state: GameState, report: DayReport) -> str:
+    def generate_persona_prompt(self, agent: Agent, company_name: str) -> str:
+        payload = {
+            "company": company_name,
+            "name": agent.name,
+            "role": agent.role,
+            "traits": ", ".join(agent.traits),
+            "strengths": ", ".join(agent.strengths),
+            "weaknesses": ", ".join(agent.weaknesses),
+            "autonomy": agent.autonomy,
+            "productivity": f"{agent.productivity:.2f}",
+        }
+        try:
+            prompt = self.persona_chain.invoke(payload).strip()
+        except Exception as exc:
+            logger.exception("Echec LangChain lors de la création de persona pour %s", agent.id)
+            raise RuntimeError("Echec de génération de la personnalité de l'agent") from exc
+
+        if not prompt:
+            raise RuntimeError("Prompt de personnalité vide")
+        return prompt
+
+    def _build_recommendation_context(self, state: GameState, report: DayReport) -> str:
         agent_lines = []
         for agent in state.agents:
             skills = ", ".join(f"{name}:{score}" for name, score in sorted(agent.skills.items()))
@@ -76,10 +82,43 @@ class ApiLLMEngine(LLMEngine):
             f"Décisions précédentes: {', '.join(report.decisions_impact)}\n"
             "Equipe:\n"
             + "\n".join(agent_lines)
-            + "\n"
-            "Retourne 3 recommandations opérationnelles concises en liste à puces (phrase courte), ciblées sur des actions concrètes pour le prochain jour."
         )
+
+    def _build_recommendation_chain(self, api_key: str, model: str):
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "Tu es directeur des opérations d'une startup SaaS. "
+                    "Produis des recommandations tactiques, courtes et actionnables en français.",
+                ),
+                (
+                    "human",
+                    "{context}\nRetourne 3 recommandations opérationnelles concises en liste à puces (phrase courte), ciblées sur des actions concrètes pour le prochain jour.",
+                ),
+            ]
+        )
+        model_client = ChatOpenAI(api_key=api_key, model=model, temperature=0.35, max_tokens=320)
+        return prompt | model_client | StrOutputParser()
+
+    def _build_persona_chain(self, api_key: str, model: str):
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "Tu es le générateur de personnalités d'une simulation d'entreprise. "
+                    "Tu produis un prompt système pour un agent IA qui incarnera un collaborateur. "
+                    "Le texte doit être en français, <120 mots, ton professionnel et incarné, sans listes ni puces.",
+                ),
+                (
+                    "human",
+                    "Entreprise: {company}\nNom: {name}\nRole: {role}\nTraits: {traits}\nPoints forts: {strengths}\nPoints faibles: {weaknesses}\nAutonomie: {autonomy}\nProductivite: {productivity}\nEcris le prompt final en parlant à la première personne pour ce collaborateur.",
+                ),
+            ]
+        )
+        model_client = ChatOpenAI(api_key=api_key, model=model, temperature=0.75, max_tokens=360)
+        return prompt | model_client | StrOutputParser()
 
 
 def get_llm_engine(settings: Settings) -> LLMEngine:
-    return ApiLLMEngine(api_key=settings.openai_api_key, model=settings.openai_model)
+    return LangChainLLMEngine(api_key=settings.openai_api_key, model=settings.openai_model)
