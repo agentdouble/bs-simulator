@@ -4,12 +4,14 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
 from .config import Settings
 from .domain import Agent, DayReport, GameState
+from .schemas import InterviewMessage
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +25,16 @@ class LLMEngine(ABC):
     def generate_persona_prompt(self, agent: Agent, company_name: str) -> str:
         raise NotImplementedError
 
+    @abstractmethod
+    def simulate_interview(self, agent: Agent, messages: List[InterviewMessage], company_name: str) -> str:
+        raise NotImplementedError
+
 
 class LangChainLLMEngine(LLMEngine):
     def __init__(self, api_key: str, model: str) -> None:
         self.recommendation_chain = self._build_recommendation_chain(api_key, model)
         self.persona_chain = self._build_persona_chain(api_key, model)
+        self.interview_model = self._build_interview_model(api_key, model)
 
     def generate_recommendations(self, state: GameState, report: DayReport) -> List[str]:
         context = self._build_recommendation_context(state, report)
@@ -64,6 +71,36 @@ class LangChainLLMEngine(LLMEngine):
         if not prompt:
             raise RuntimeError("Prompt de personnalité vide")
         return prompt
+
+    def simulate_interview(self, agent: Agent, messages: List[InterviewMessage], company_name: str) -> str:
+        if not agent.persona_prompt:
+            raise RuntimeError("Prompt de personnalité manquant pour l'entretien")
+
+        chat_messages: List[SystemMessage | HumanMessage | AIMessage] = [
+            SystemMessage(content=agent.persona_prompt),
+            SystemMessage(
+                content=(
+                    f"Tu es en entretien pour un poste {agent.role} chez {company_name}. "
+                    "Réponds en français en 2 phrases maximum, ton style reste professionnel et incarné."
+                )
+            ),
+        ]
+        for msg in messages:
+            if msg.sender == "manager":
+                chat_messages.append(HumanMessage(content=msg.content))
+            else:
+                chat_messages.append(AIMessage(content=msg.content))
+
+        try:
+            response = self.interview_model.invoke(chat_messages)
+        except Exception as exc:
+            logger.exception("Echec LangChain pendant l'entretien avec %s", agent.name)
+            raise RuntimeError("Echec de simulation d'entretien via LangChain") from exc
+
+        text = response.content.strip() if hasattr(response, "content") else str(response).strip()
+        if not text:
+            raise RuntimeError("Réponse d'entretien vide")
+        return text
 
     def _build_recommendation_context(self, state: GameState, report: DayReport) -> str:
         agent_lines = []
@@ -118,6 +155,9 @@ class LangChainLLMEngine(LLMEngine):
         )
         model_client = ChatOpenAI(api_key=api_key, model=model, temperature=0.75, max_tokens=360)
         return prompt | model_client | StrOutputParser()
+
+    def _build_interview_model(self, api_key: str, model: str) -> ChatOpenAI:
+        return ChatOpenAI(api_key=api_key, model=model, temperature=0.65, max_tokens=220)
 
 
 def get_llm_engine(settings: Settings) -> LLMEngine:

@@ -26,7 +26,11 @@ class GameRepository(Protocol):
         raise NotImplementedError
 
     def save(
-        self, state: GameState, actions: List[ManagerAction] | None = None, action_day: int | None = None
+        self,
+        state: GameState,
+        actions: List[ManagerAction] | None = None,
+        action_day: int | None = None,
+        persist_state: bool = True,
     ) -> GameState:
         raise NotImplementedError
 
@@ -45,7 +49,11 @@ class InMemoryGameRepository:
         return self._store[game_id]
 
     def save(
-        self, state: GameState, actions: List[ManagerAction] | None = None, action_day: int | None = None
+        self,
+        state: GameState,
+        actions: List[ManagerAction] | None = None,
+        action_day: int | None = None,
+        persist_state: bool = True,
     ) -> GameState:
         self._store[state.game_id] = state
         return state
@@ -96,12 +104,17 @@ class SupabaseGameRepository:
         )
 
     def save(
-        self, state: GameState, actions: List[ManagerAction] | None = None, action_day: int | None = None
+        self,
+        state: GameState,
+        actions: List[ManagerAction] | None = None,
+        action_day: int | None = None,
+        persist_state: bool = True,
     ) -> GameState:
         company_id = self._get_company_id(state.game_id)
         self._update_company(company_id, state.company)
         self._sync_agents(company_id, state.game_id, state.agents)
-        self._insert_game_state(state, company_id)
+        if persist_state:
+            self._insert_game_state(state, company_id)
         if actions:
             self._insert_manager_actions(state.game_id, action_day or state.day, actions)
         return state

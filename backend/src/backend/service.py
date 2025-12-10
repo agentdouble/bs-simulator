@@ -6,17 +6,10 @@ from typing import List, Tuple
 
 from fastapi import HTTPException, status
 
-from .domain import (
-    Agent,
-    AgentInsight,
-    BusinessResults,
-    DayReport,
-    GameState,
-    create_initial_state,
-)
+from .domain import Agent, AgentInsight, BusinessResults, DayReport, GameState, create_initial_state, generate_agent
 from .llm import LLMEngine
 from .repositories import GameRepository
-from .schemas import ActionRequest, ManagerAction, StartGameRequest
+from .schemas import ActionRequest, HireRequest, InterviewRequest, ManagerAction, RecruitmentRequest, StartGameRequest
 
 
 logger = logging.getLogger(__name__)
@@ -62,6 +55,46 @@ class GameService:
         self.repository.save(next_state, payload.actions, action_day=action_day)
         logger.info("Etat jour %s enregistré pour %s", report.day, payload.game_id)
         return next_state, report
+
+    def generate_candidates(self, payload: RecruitmentRequest) -> List[Agent]:
+        state = self.repository.get(payload.game_id)
+        candidates: List[Agent] = []
+        desired = max(1, min(payload.count, 6))
+
+        existing_ids = {agent.id for agent in state.agents}
+        while len(candidates) < desired:
+            candidate = generate_agent(self.rng)
+            if candidate.id in existing_ids:
+                continue
+            persona = self.llm_engine.generate_persona_prompt(candidate, state.company.name)
+            candidates.append(candidate.copy_with_updates(persona_prompt=persona))
+            existing_ids.add(candidate.id)
+
+        logger.info("Candidats générés pour la partie %s: %s profils", payload.game_id, len(candidates))
+        return candidates
+
+    def interview_candidate(self, payload: InterviewRequest) -> str:
+        state = self.repository.get(payload.game_id)
+        reply = self.llm_engine.simulate_interview(payload.candidate, payload.messages, state.company.name)
+        logger.info("Réponse entretien pour %s dans la partie %s", payload.candidate.id, payload.game_id)
+        return reply
+
+    def hire_candidate(self, payload: HireRequest) -> GameState:
+        state = self.repository.get(payload.game_id)
+        if any(agent.id == payload.candidate.id for agent in state.agents):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Candidat déjà présent dans l'équipe"
+            )
+        next_state = GameState(
+            game_id=state.game_id,
+            day=state.day,
+            company=state.company.model_copy(deep=True),
+            agents=state.agents + [payload.candidate],
+            last_report=state.last_report,
+        )
+        self.repository.save(next_state, persist_state=False)
+        logger.info("Candidat %s recruté pour la partie %s", payload.candidate.id, payload.game_id)
+        return next_state
 
     def _apply_actions(
         self, agents: List[Agent], actions: List[ManagerAction]

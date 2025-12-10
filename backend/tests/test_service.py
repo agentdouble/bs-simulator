@@ -1,6 +1,14 @@
 from backend.llm import LLMEngine
 from backend.repositories import InMemoryGameRepository
-from backend.schemas import ActionRequest, ManagerAction, StartGameRequest
+from backend.schemas import (
+    ActionRequest,
+    HireRequest,
+    InterviewMessage,
+    InterviewRequest,
+    ManagerAction,
+    RecruitmentRequest,
+    StartGameRequest,
+)
 from backend.service import GameService
 
 
@@ -10,6 +18,9 @@ class StubLLMEngine(LLMEngine):
 
     def generate_persona_prompt(self, agent, company_name):
         return f"Persona {agent.name}"
+
+    def simulate_interview(self, agent, messages, company_name):
+        return f"Réponse entretien pour {agent.name}"
 
 
 def test_start_game_creates_state():
@@ -41,3 +52,24 @@ def test_apply_actions_updates_day_and_agents():
     updated_agent = next(a for a in next_state.agents if a.id == target_agent.id)
     assert updated_agent.motivation >= target_agent.motivation
     assert next_state.company.cash != state.company.cash
+
+
+def test_recruitment_flow_adds_agent_without_advancing_day():
+    service = GameService(InMemoryGameRepository(), StubLLMEngine())
+    state = service.start_game(StartGameRequest(company_name="Nova Corp"))
+
+    candidates = service.generate_candidates(RecruitmentRequest(game_id=state.game_id, count=2))
+    assert len(candidates) == 2
+
+    reply = service.interview_candidate(
+        InterviewRequest(
+            game_id=state.game_id,
+            candidate=candidates[0],
+            messages=[InterviewMessage(sender="manager", content="Présente-toi")],
+        )
+    )
+    assert "Réponse entretien" in reply
+
+    updated_state = service.hire_candidate(HireRequest(game_id=state.game_id, candidate=candidates[0]))
+    assert updated_state.day == state.day
+    assert len(updated_state.agents) == len(state.agents) + 1

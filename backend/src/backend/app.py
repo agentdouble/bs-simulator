@@ -6,7 +6,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .llm import get_llm_engine
 from .repositories import GameRepository, InMemoryGameRepository, SupabaseGameRepository
-from .schemas import ActionRequest, ActionResponse, GameStateResponse, StartGameRequest, StartGameResponse
+from .schemas import (
+    ActionRequest,
+    ActionResponse,
+    GameStateResponse,
+    HireRequest,
+    HireResponse,
+    InterviewRequest,
+    InterviewResponse,
+    RecruitmentRequest,
+    RecruitmentResponse,
+    StartGameRequest,
+    StartGameResponse,
+)
 from .service import GameService
 
 
@@ -66,3 +78,21 @@ def apply_action(payload: ActionRequest) -> ActionResponse:
 def get_state(game_id: str) -> GameStateResponse:
     state = service.get_state(game_id)
     return GameStateResponse(state=state)
+
+
+@app.post("/recruitment/candidates", response_model=RecruitmentResponse)
+def generate_candidates(payload: RecruitmentRequest) -> RecruitmentResponse:
+    candidates = service.generate_candidates(payload)
+    return RecruitmentResponse(candidates=candidates)
+
+
+@app.post("/recruitment/interview", response_model=InterviewResponse)
+def interview_candidate(payload: InterviewRequest) -> InterviewResponse:
+    reply = service.interview_candidate(payload)
+    return InterviewResponse(reply=reply)
+
+
+@app.post("/recruitment/hire", response_model=HireResponse)
+def hire_candidate(payload: HireRequest) -> HireResponse:
+    state = service.hire_candidate(payload)
+    return HireResponse(state=state)

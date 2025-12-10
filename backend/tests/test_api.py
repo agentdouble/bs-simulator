@@ -15,6 +15,9 @@ class StubLLMEngine(LLMEngine):
     def generate_persona_prompt(self, agent, company_name):
         return f"Persona {agent.name}"
 
+    def simulate_interview(self, agent, messages, company_name):
+        return f"Réponse stub entretien pour {agent.name}"
+
 
 app_module.llm_engine = StubLLMEngine()
 app_module.service.llm_engine = app_module.llm_engine
@@ -57,3 +60,32 @@ def test_preflight_options_game_start():
     )
     assert res.status_code == 200
     assert res.headers.get("access-control-allow-origin") == "*"
+
+
+def test_recruitment_endpoints_flow():
+    start = client.post("/game/start", json={"company_name": "Hiring Co"})
+    assert start.status_code == 200
+    initial_agents = len(start.json()["state"]["agents"])
+    game_id = start.json()["state"]["game_id"]
+
+    candidates_res = client.post("/recruitment/candidates", json={"game_id": game_id, "count": 2})
+    assert candidates_res.status_code == 200
+    candidates_body = candidates_res.json()
+    assert len(candidates_body["candidates"]) == 2
+    candidate = candidates_body["candidates"][0]
+
+    interview_res = client.post(
+        "/recruitment/interview",
+        json={
+            "game_id": game_id,
+            "candidate": candidate,
+            "messages": [{"sender": "manager", "content": "Parlez-moi de vous"}],
+        },
+    )
+    assert interview_res.status_code == 200
+    assert "Réponse stub entretien" in interview_res.json()["reply"]
+
+    hire_res = client.post("/recruitment/hire", json={"game_id": game_id, "candidate": candidate})
+    assert hire_res.status_code == 200
+    final_agents = len(hire_res.json()["state"]["agents"])
+    assert final_agents == initial_agents + 1
