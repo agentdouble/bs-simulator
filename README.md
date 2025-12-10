@@ -53,11 +53,38 @@ npm start
 
 L'app appelle l'API en `http://localhost:8055` par défaut. Pour cibler un autre backend, définir `EXPO_PUBLIC_API_URL` avant de démarrer Expo.
 Le script `start.sh` lance Expo en mode web (front accessible sur `http://localhost:8056`).  
-L'interface web est pensée pour tenir sur une seule page, découpée en sections avec onglets (Synthèse, Effectifs, Finance, Rapport), sans scroll infini.
+L'interface web est pensée pour tenir sur une seule page, découpée en sections avec onglets (Synthèse, Effectifs, Finance, Rapport), sans scroll infini.  
+La barre supérieure affiche désormais un compte à rebours de 60 minutes (avec secondes et millisecondes) et un compteur de cash (initialisé à 10 €).
+
+### Vue Effectifs
+
+Chaque agent affiche un histogramme couvrant 5 compétences (Compétence Technique, Créativité, Communication, Organisation, Autonomie).  
+Les valeurs vont de 1 à 10 et totalisent 20 points répartis aléatoirement à la création d'un employé; aucune action n'est proposée dans cet onglet, c'est un simple tableau de bord visuel.
+
+### Vue Secteurs
+
+L'onglet **Secteurs** permet de répartir les effectifs entre quatre zones (Développement Produit, Marketing, Service Client, Recherche & Dev).  
+Sélectionne un agent (le badge devient noir) puis clique sur un secteur pour l'y affecter. Les quatre secteurs remplissent la partie centrale (grille 2x2 avec scroll interne si nécessaire) et la barre inférieure regroupe les effectifs non assignés pour libérer rapidement un agent.
 
 ## Supabase
 
 Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont fournis (sinon stockage en mémoire, cela est loggué au démarrage). Les tables attendues côté base sont : `companies`, `agents`, `game_states`, `manager_actions`. Le schéma est maintenu directement dans ton projet Supabase (plus de fichier SQL dans le repo).
+
+- Nouvelle table obligatoire : `agent_competencies` qui stocke les 5 statistiques des agents (colonnes `agent_id`, `company_id`, `technical`, `creativity`, `communication`, `organisation`, `autonomy`). Exemple de création :
+
+```sql
+create table if not exists public.agent_competencies (
+  agent_id uuid references public.agents(id) on delete cascade,
+  company_id uuid references public.companies(id) on delete cascade,
+  technical int not null default 1,
+  creativity int not null default 1,
+  communication int not null default 1,
+  organisation int not null default 1,
+  autonomy int not null default 1,
+  primary key(agent_id)
+);
+```
+- Si la table est absente, le backend tente de la créer automatiquement via l'API `pg_meta` de Supabase (utilise `SUPABASE_KEY` en service role). Si la clé n'a pas les droits, l'API renverra un 500 avec le SQL ci-dessus à exécuter manuellement.
 
 - Variables côté backend : `SUPABASE_URL` (API URL) et `SUPABASE_KEY` (clé service ou anon selon tes règles).
 - En environnement filtré/SSL intercepté, tu peux poser `SUPABASE_VERIFY_SSL=false` pour autoriser un certificat non signé (défaut: true).
