@@ -34,7 +34,7 @@ service = GameService(repository, llm_engine)
 
 app = FastAPI(title="BS Simulator API", version="0.1.0")
 
-logger.info("Mode LLM API initialisé avec le modèle %s", settings.openai_model)
+logger.info("Moteur de recommandations heuristique activé (aucun appel LLM externe)")
 
 app.add_middleware(
     CORSMiddleware,

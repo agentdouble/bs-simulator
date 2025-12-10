@@ -15,8 +15,6 @@ uv run uvicorn backend.app:app --reload --port 8055
 ```
 
 Variables d'environnement attendues (voir `backend/.env`):
-- `OPENAI_API_KEY` (obligatoire pour le LLM OpenAI)
-- `OPENAI_MODEL` (optionnel, défaut `gpt-4o-mini`)
 - `SUPABASE_URL`, `SUPABASE_KEY` (optionnels)
 - `SUPABASE_VERIFY_SSL` (optionnel, défaut `true`, à passer à `false` si un proxy TLS intercepte les certificats)
 
@@ -37,7 +35,7 @@ Endpoints principaux :
 - `POST /game/action` : applique les décisions du gérant pour le jour en cours et retourne l'état du jour.
 - `GET /game/state/{game_id}` : récupère l'état courant.
 
-LLM : le backend utilise exclusivement l'API OpenAI (modèle `gpt-4o-mini` par défaut). Fournis une clé via `OPENAI_API_KEY` avant de lancer le serveur.
+LLM : le backend embarque désormais un moteur heuristique local pour générer les recommandations, aucun appel API externe n'est effectué.
 
 Tests backend :
 
@@ -68,5 +66,5 @@ Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont
 ## Structure
 
 - `backend/src/backend/service.py` : moteur de jeu (génération d'agents, application des actions, calcul des résultats).
-- `backend/src/backend/llm.py` : interface LLM connectée à l'API OpenAI.
+- `backend/src/backend/llm.py` : moteur de recommandations heuristiques (pas d'API externe).
 - `frontend/App.tsx` : écrans dashboard + actions rapides sur les effectifs (personnes).

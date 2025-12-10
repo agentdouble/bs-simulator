@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import logging
-from openai import OpenAI
 
 from .config import Settings
 from .domain import DayReport, GameState
@@ -18,68 +17,59 @@ class LLMEngine(ABC):
         raise NotImplementedError
 
 
-class ApiLLMEngine(LLMEngine):
-    def __init__(self, api_key: str, model: str) -> None:
-        self.client = OpenAI(api_key=api_key)
-        self.model = model
+class RuleBasedLLMEngine(LLMEngine):
+    """Simple heuristic engine while the real LLM is disabled."""
 
     def generate_recommendations(self, state: GameState, report: DayReport) -> List[str]:
-        prompt = self._build_prompt(state, report)
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Tu es directeur des opérations d'une startup SaaS. "
-                            "Produis des recommandations tactiques, courtes et actionnables en français."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
-                temperature=0.35,
-                max_tokens=320,
-            )
-        except Exception as exc:  # openai library already normalises errors
-            logger.exception("Echec lors de l'appel LLM externe")
-            raise RuntimeError("Echec de génération de recommandations via l'API LLM") from exc
+        results = report.results
+        agent_count = len(state.agents)
+        avg_motivation = (
+            sum(agent.motivation for agent in state.agents) / agent_count if agent_count else 0.0
+        )
+        avg_stability = (
+            sum(agent.stability for agent in state.agents) / agent_count if agent_count else 0.0
+        )
+        max_errors = max(1, agent_count // 2)
+        recommendations: List[str] = []
 
-        message = response.choices[0].message.content if response.choices else None
-        if not message:
-            raise RuntimeError("Réponse LLM vide")
+        def add_reco(message: str) -> None:
+            if message not in recommendations:
+                recommendations.append(message)
 
-        recommendations = [line.lstrip("-• ").strip() for line in message.splitlines() if line.strip()]
+        if results.net < 0:
+            add_reco("Stopper les dépenses non essentielles et concentrer l'équipe sur les deals à marge élevée.")
+
+        cash_horizon = results.costs * 2 if results.costs else 20000
+        if state.company.cash < cash_horizon:
+            add_reco("Sécuriser de la trésorerie (clients prépayés ou prêt court terme) avant la fin du trimestre.")
+
+        if avg_motivation < 60:
+            add_reco("Planifier des 1:1 coaching pour remonter la motivation et clarifier les priorités.")
+
+        if avg_stability < 60 or results.errors > max_errors:
+            add_reco("Durcir le focus qualité (revues croisées, binômage) pour réduire les incidents clients.")
+
+        if agent_count >= 3 and results.innovations == 0:
+            add_reco("Réserver un sprint produit dédié à l'innovation pour préparer les fonctionnalités différenciantes.")
+
+        if results.clients < max(3, agent_count):
+            add_reco("Rebooster la prospection: 2 créneaux quotidiens bloqués pour les appels sortants.")
+
         if not recommendations:
-            raise RuntimeError("Aucune recommandation exploitable renvoyée par le LLM")
+            add_reco("Revoir le plan d'actions du jour suivant avec l'équipe et verrouiller 3 objectifs mesurables.")
 
-        logger.info("Recommandations LLM générées pour le jour %s", report.day)
+        defaults = [
+            "Vérifier quotidiennement les indicateurs cash, MRR et incidents avant 10h.",
+            "Communiquer un court compte-rendu aux parties prenantes pour garder l'alignement.",
+        ]
+        for reco in defaults:
+            if len(recommendations) >= 4:
+                break
+            add_reco(reco)
+
+        logger.info("Recommandations heuristiques générées pour le jour %s", report.day)
         return recommendations[:4]
 
-    def _build_prompt(self, state: GameState, report: DayReport) -> str:
-        agent_lines = []
-        for agent in state.agents:
-            skills = ", ".join(f"{name}:{score}" for name, score in sorted(agent.skills.items()))
-            agent_lines.append(
-                f"- {agent.name} ({agent.role}) prod {agent.productivity}, mot {agent.motivation}/100, "
-                f"stab {agent.stability}/100, auto {agent.autonomy}, skills {skills}, traits: {', '.join(agent.traits)}"
-            )
 
-        return (
-            f"Entreprise: {state.company.name} | Jour {report.day}\n"
-            f"Cash: {state.company.cash:.0f} | Revenu: {report.results.revenue:.0f} | "
-            f"Coûts: {report.results.costs:.0f} | Net: {report.results.net:.0f}\n"
-            f"Clients: {report.results.clients} | Innovations: {report.results.innovations} | Incidents: {report.results.errors}\n"
-            f"Décisions précédentes: {', '.join(report.decisions_impact)}\n"
-            "Equipe:\n"
-            + "\n".join(agent_lines)
-            + "\n"
-            "Retourne 3 recommandations opérationnelles concises en liste à puces (phrase courte), ciblées sur des actions concrètes pour le prochain jour."
-        )
-
-
-def get_llm_engine(settings: Settings) -> LLMEngine:
-    return ApiLLMEngine(api_key=settings.openai_api_key, model=settings.openai_model)
+def get_llm_engine(settings: Settings) -> LLMEngine:  # noqa: ARG001 - settings reserved for future config
+    return RuleBasedLLMEngine()

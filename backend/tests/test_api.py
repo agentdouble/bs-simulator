@@ -1,8 +1,4 @@
-import os
-
 from fastapi.testclient import TestClient
-
-os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend import app as app_module
 from backend.llm import LLMEngine
