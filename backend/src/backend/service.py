@@ -92,7 +92,7 @@ class GameService:
             agents=state.agents + [payload.candidate],
             last_report=state.last_report,
         )
-        self.repository.save(next_state, persist_state=False)
+        self.repository.save(next_state, persist_state=True)
         logger.info("Candidat %s recruté pour la partie %s", payload.candidate.id, payload.game_id)
         return next_state
 

@@ -73,9 +73,22 @@ class GameState(BaseModel):
 
 
 def _random_name(rng: random.Random) -> str:
-    first = ["Nova", "Atlas", "Vega", "Orion", "Lumen", "Echo"]
-    last = ["Core", "Pulse", "Stack", "Logic", "Prime", "Grid"]
-    return f"{rng.choice(first)} {rng.choice(last)}"
+    identities = [
+        ("Amira", "Ben Youssef", "Tunis"),
+        ("Diego", "Alvarez", "Bogota"),
+        ("Lina", "Okafor", "Lagos"),
+        ("Jin", "Park", "Seoul"),
+        ("Maya", "Singh", "Delhi"),
+        ("Noah", "Levy", "Montreal"),
+        ("Sofia", "Costa", "Lisbonne"),
+        ("Yara", "Rahman", "Dhaka"),
+        ("Leo", "Fischer", "Berlin"),
+        ("Nora", "Ionescu", "Bucarest"),
+        ("Tenzin", "Dorji", "Thimphou"),
+        ("Ari", "Silva", "Recife"),
+    ]
+    first, last, city = rng.choice(identities)
+    return f"{first} {last} ({city})"
 
 
 def _random_role(rng: random.Random) -> str:
