@@ -5,6 +5,7 @@ __pycache__/
 **/.venv/
 backend/.pytest_cache/
 *.pyc
+backend/.env
 
 # Node/Expo
 frontend/node_modules/

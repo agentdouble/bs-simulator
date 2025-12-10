@@ -20,6 +20,8 @@ Variables d'environnement attendues (voir `backend/.env`):
 - `SUPABASE_URL`, `SUPABASE_KEY` (optionnels)
 - `SUPABASE_VERIFY_SSL` (optionnel, défaut `true`, à passer à `false` si un proxy TLS intercepte les certificats)
 
+Note : `backend/.env` n'est pas versionné. Crée-le manuellement et ne commit jamais de clé sensible.
+
 Le script `start.sh` charge automatiquement `backend/.env` s'il existe.
 
 Ou via le script racine (lance backend + front) :
