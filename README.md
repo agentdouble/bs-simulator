@@ -59,7 +59,7 @@ npm start
 L'app appelle l'API en `http://localhost:8055` par défaut. Pour cibler un autre backend, définir `EXPO_PUBLIC_API_URL` avant de démarrer Expo.
 Le script `start.sh` lance Expo en mode web (front accessible sur `http://localhost:8056`).  
 L'interface web est pensée pour tenir sur une seule page, découpée en sections avec onglets (Synthèse, Effectifs, Finance, Rapport), sans scroll infini.
-Un onglet Recrutement permet de générer des candidats IA, discuter avec eux via un mini-chat d'entretien puis les ajouter aux effectifs.
+Un onglet Recrutement permet de générer des candidats IA, discuter avec eux via un mini-chat d'entretien puis les ajouter aux effectifs. Les infos sensibles (salaire, compétences détaillées) apparaissent seulement après avoir ouvert leur CV.
 
 ## Supabase
 

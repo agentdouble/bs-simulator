@@ -201,6 +201,7 @@ export default function App() {
   const [interviewInput, setInterviewInput] = useState("");
   const [recruitmentLoading, setRecruitmentLoading] = useState(false);
   const [interviewLoading, setInterviewLoading] = useState(false);
+  const [cvOpened, setCvOpened] = useState<Record<string, boolean>>({});
 
   const summary = useMemo(() => {
     const baseReport = report ?? state?.last_report;
@@ -225,6 +226,7 @@ export default function App() {
       setSelectedCandidateId(null);
       setInterviewMessages({});
       setInterviewInput("");
+      setCvOpened({});
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -266,6 +268,7 @@ export default function App() {
       setCandidates(profiles);
       setInterviewMessages({});
       setSelectedCandidateId(profiles[0]?.id ?? null);
+      setCvOpened({});
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -309,6 +312,11 @@ export default function App() {
         delete copy[selectedCandidate.id];
         return copy;
       });
+      setCvOpened((current) => {
+        const next = { ...current };
+        delete next[selectedCandidate.id];
+        return next;
+      });
       setSelectedCandidateId(remaining[0]?.id ?? null);
     } catch (e) {
       setError((e as Error).message);
@@ -320,6 +328,10 @@ export default function App() {
   const handleSelectCandidate = (candidateId: string) => {
     setSelectedCandidateId(candidateId);
     setInterviewInput("");
+  };
+
+  const handleOpenCv = (candidateId: string) => {
+    setCvOpened((current) => ({ ...current, [candidateId]: true }));
   };
 
   const hasGame = Boolean(state);
@@ -487,26 +499,22 @@ export default function App() {
                     </View>
                     {error ? <Text style={styles.error}>{error}</Text> : null}
                   </View>
-                  {candidates.length === 0 ? (
-                    <Text style={styles.meta}>Aucun profil pour l'instant.</Text>
-                  ) : (
-                    <View style={styles.agentsGrid}>
-                      {candidates.map((candidate) => (
-                        <TouchableOpacity
-                          key={candidate.id}
-                          onPress={() => handleSelectCandidate(candidate.id)}
-                          style={[styles.card, selectedCandidateId === candidate.id && styles.cardSelected]}
-                        >
-                          <View style={styles.cardHeader}>
-                            <Text style={styles.cardTitle}>{candidate.name}</Text>
-                            <Text style={styles.badge}>{candidate.role}</Text>
-                          </View>
-                          <Text style={styles.meta}>Salaire cible: {formatCurrency(candidate.salary)}</Text>
-                          <Text style={styles.meta}>Autonomie: {candidate.autonomy}</Text>
-                          <Text style={styles.meta}>Traits: {candidate.traits.slice(0, 3).join(", ")}</Text>
-                          <Text style={styles.meta}>
-                            Points forts: {candidate.strengths.join(", ")} | Risques: {candidate.weaknesses.join(", ")}
-                          </Text>
+                    {candidates.length === 0 ? (
+                      <Text style={styles.meta}>Aucun profil pour l'instant.</Text>
+                    ) : (
+                      <View style={styles.agentsGrid}>
+                        {candidates.map((candidate) => (
+                          <TouchableOpacity
+                            key={candidate.id}
+                            onPress={() => handleSelectCandidate(candidate.id)}
+                            style={[styles.card, selectedCandidateId === candidate.id && styles.cardSelected]}
+                          >
+                            <View style={styles.cardHeader}>
+                              <Text style={styles.cardTitle}>{candidate.name}</Text>
+                              <Text style={styles.badge}>{candidate.role}</Text>
+                            </View>
+                          <Text style={styles.meta}>Profil succinct: traits {candidate.traits.slice(0, 2).join(", ")}</Text>
+                          <Text style={styles.meta}>Clique pour ouvrir le CV et découvrir le reste.</Text>
                           <View style={styles.actionsRow}>
                             <TouchableOpacity
                               style={styles.secondaryButton}
@@ -531,17 +539,41 @@ export default function App() {
                         <Text style={styles.cardTitle}>Entretien avec {selectedCandidate.name}</Text>
                         <Text style={styles.meta}>Role {selectedCandidate.role}</Text>
                       </View>
-                      <Text style={styles.meta}>
-                        Productivité: {selectedCandidate.productivity} · Motivation:{" "}
-                        {selectedCandidate.motivation.toFixed(0)} · Stabilité: {selectedCandidate.stability.toFixed(0)}
-                      </Text>
-                      <Text style={styles.meta}>
-                        Compétences clés:{" "}
-                        {Object.entries(selectedCandidate.skills)
-                          .slice(0, 3)
-                          .map(([name, score]) => `${name} ${score}`)
-                          .join(" · ")}
-                      </Text>
+                      {!cvOpened[selectedCandidate.id] ? (
+                        <View style={{ gap: 8 }}>
+                          <Text style={styles.meta}>
+                            CV fermé : ouvre-le pour découvrir salaire, compétences et points clés.
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.primaryButton}
+                            onPress={() => handleOpenCv(selectedCandidate.id)}
+                            disabled={recruitmentLoading}
+                          >
+                            <Text style={styles.primaryText}>Ouvrir le CV</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={{ gap: 4 }}>
+                          <Text style={styles.meta}>Salaire cible: {formatCurrency(selectedCandidate.salary)}</Text>
+                          <Text style={styles.meta}>Autonomie: {selectedCandidate.autonomy}</Text>
+                          <Text style={styles.meta}>Traits: {selectedCandidate.traits.join(", ")}</Text>
+                          <Text style={styles.meta}>
+                            Points forts: {selectedCandidate.strengths.join(", ")} | Risques:{" "}
+                            {selectedCandidate.weaknesses.join(", ")}
+                          </Text>
+                          <Text style={styles.meta}>
+                            Productivité: {selectedCandidate.productivity} · Motivation:{" "}
+                            {selectedCandidate.motivation.toFixed(0)} · Stabilité: {selectedCandidate.stability.toFixed(0)}
+                          </Text>
+                          <Text style={styles.meta}>
+                            Compétences clés:{" "}
+                            {Object.entries(selectedCandidate.skills)
+                              .slice(0, 3)
+                              .map(([name, score]) => `${name} ${score}`)
+                              .join(" · ")}
+                          </Text>
+                        </View>
+                      )}
                       <View style={styles.interviewThread}>
                         {currentInterview.length === 0 ? (
                           <Text style={styles.meta}>Pose une première question pour lancer la discussion.</Text>
