@@ -22,6 +22,7 @@ type Agent = {
   traits: string[];
   motivation: number;
   stability: number;
+  persona_prompt?: string;
 };
 
 type BusinessResults = {
@@ -73,6 +74,11 @@ type ActionResponse = {
   report: DayReport;
 };
 
+type InterviewMessage = {
+  sender: "manager" | "candidate";
+  content: string;
+};
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8055";
 
 const terminalFont = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
@@ -101,6 +107,49 @@ async function playDay(gameId: string, actions: ManagerAction[]): Promise<Action
     throw new Error(`Action refusée (${res.status})`);
   }
   return res.json();
+}
+
+async function fetchCandidates(gameId: string, count: number = 3): Promise<Agent[]> {
+  const res = await fetch(`${API_BASE_URL}/recruitment/candidates`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ game_id: gameId, count }),
+  });
+  if (!res.ok) {
+    throw new Error(`Impossible de générer des candidats (${res.status})`);
+  }
+  const data = await res.json();
+  return data.candidates;
+}
+
+async function interviewCandidate(
+  gameId: string,
+  candidate: Agent,
+  messages: InterviewMessage[]
+): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/recruitment/interview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ game_id: gameId, candidate, messages }),
+  });
+  if (!res.ok) {
+    throw new Error(`Entretien indisponible (${res.status})`);
+  }
+  const data = await res.json();
+  return data.reply;
+}
+
+async function hireCandidate(gameId: string, candidate: Agent): Promise<GameState> {
+  const res = await fetch(`${API_BASE_URL}/recruitment/hire`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ game_id: gameId, candidate }),
+  });
+  if (!res.ok) {
+    throw new Error(`Recrutement refusé (${res.status})`);
+  }
+  const data = await res.json();
+  return data.state;
 }
 
 function formatCurrency(amount: number): string {
@@ -141,14 +190,29 @@ export default function App() {
   const [state, setState] = useState<GameState | null>(null);
   const [report, setReport] = useState<DayReport | null>(null);
   const [pendingActions, setPendingActions] = useState<ManagerAction[]>([]);
-  const [activeTab, setActiveTab] = useState<"game" | "summary" | "agents" | "finance" | "report">("game");
+  const [activeTab, setActiveTab] = useState<"game" | "summary" | "agents" | "finance" | "report" | "recruitment">(
+    "game"
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<Agent[]>([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [interviewMessages, setInterviewMessages] = useState<Record<string, InterviewMessage[]>>({});
+  const [interviewInput, setInterviewInput] = useState("");
+  const [recruitmentLoading, setRecruitmentLoading] = useState(false);
+  const [interviewLoading, setInterviewLoading] = useState(false);
+  const [cvOpened, setCvOpened] = useState<Record<string, boolean>>({});
 
   const summary = useMemo(() => {
     const baseReport = report ?? state?.last_report;
     return baseReport?.results;
   }, [report, state]);
+
+  const selectedCandidate = useMemo(
+    () => candidates.find((candidate) => candidate.id === selectedCandidateId) ?? null,
+    [candidates, selectedCandidateId]
+  );
+  const currentInterview = selectedCandidate ? interviewMessages[selectedCandidate.id] ?? [] : [];
 
   const handleStart = async () => {
     setLoading(true);
@@ -158,6 +222,11 @@ export default function App() {
       setState(created.state);
       setReport(created.state.last_report ?? null);
       setPendingActions([]);
+      setCandidates([]);
+      setSelectedCandidateId(null);
+      setInterviewMessages({});
+      setInterviewInput("");
+      setCvOpened({});
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -188,6 +257,81 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenerateCandidates = async () => {
+    if (!state) return;
+    setRecruitmentLoading(true);
+    setError(null);
+    try {
+      const profiles = await fetchCandidates(state.game_id);
+      setCandidates(profiles);
+      setInterviewMessages({});
+      setSelectedCandidateId(profiles[0]?.id ?? null);
+      setCvOpened({});
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRecruitmentLoading(false);
+    }
+  };
+
+  const handleSendInterview = async () => {
+    if (!state || !selectedCandidate || interviewInput.trim().length === 0) return;
+    const message: InterviewMessage = { sender: "manager", content: interviewInput.trim() };
+    const thread = interviewMessages[selectedCandidate.id] ?? [];
+    const updatedThread = [...thread, message];
+    setInterviewMessages((current) => ({ ...current, [selectedCandidate.id]: updatedThread }));
+    setInterviewInput("");
+    setInterviewLoading(true);
+    setError(null);
+    try {
+      const reply = await interviewCandidate(state.game_id, selectedCandidate, updatedThread);
+      setInterviewMessages((current) => ({
+        ...current,
+        [selectedCandidate.id]: [...updatedThread, { sender: "candidate", content: reply }],
+      }));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setInterviewLoading(false);
+    }
+  };
+
+  const handleHireSelected = async () => {
+    if (!state || !selectedCandidate) return;
+    setRecruitmentLoading(true);
+    setError(null);
+    try {
+      const updatedState = await hireCandidate(state.game_id, selectedCandidate);
+      setState(updatedState);
+      const remaining = candidates.filter((candidate) => candidate.id !== selectedCandidate.id);
+      setCandidates(remaining);
+      setInterviewMessages((current) => {
+        const copy = { ...current };
+        delete copy[selectedCandidate.id];
+        return copy;
+      });
+      setCvOpened((current) => {
+        const next = { ...current };
+        delete next[selectedCandidate.id];
+        return next;
+      });
+      setSelectedCandidateId(remaining[0]?.id ?? null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRecruitmentLoading(false);
+    }
+  };
+
+  const handleSelectCandidate = (candidateId: string) => {
+    setSelectedCandidateId(candidateId);
+    setInterviewInput("");
+  };
+
+  const handleOpenCv = (candidateId: string) => {
+    setCvOpened((current) => ({ ...current, [candidateId]: true }));
   };
 
   const hasGame = Boolean(state);
@@ -224,6 +368,16 @@ export default function App() {
                   >
                     <Text style={[styles.tabButtonText, activeTab === "agents" && styles.tabButtonTextActive]}>
                       Effectifs
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tabButton, activeTab === "recruitment" && styles.tabButtonActive]}
+                    onPress={() => setActiveTab("recruitment")}
+                  >
+                    <Text
+                      style={[styles.tabButtonText, activeTab === "recruitment" && styles.tabButtonTextActive]}
+                    >
+                      Recrutement
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -305,6 +459,7 @@ export default function App() {
                         <Text style={styles.secondaryText}>Vider</Text>
                       </TouchableOpacity>
                     </View>
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
                     {loading ? <ActivityIndicator color={palette.text} style={{ marginTop: 8 }} /> : null}
                   </View>
                 </View>
@@ -324,6 +479,155 @@ export default function App() {
                       </View>
                     ))}
                   </View>
+                </View>
+              )}
+
+              {activeTab === "recruitment" && (
+                <View style={styles.block}>
+                  <Text style={styles.sectionTitle}>Recrutement</Text>
+                  <View style={styles.card}>
+                    <Text style={styles.meta}>Génère des profils et simule l'entretien avant d'embaucher.</Text>
+                    <View style={styles.actionsRow}>
+                      <TouchableOpacity
+                        style={styles.primaryButton}
+                        onPress={handleGenerateCandidates}
+                        disabled={recruitmentLoading}
+                      >
+                        <Text style={styles.primaryText}>Générer des candidats</Text>
+                      </TouchableOpacity>
+                      {recruitmentLoading ? <ActivityIndicator color={palette.text} /> : null}
+                    </View>
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+                  </View>
+                    {candidates.length === 0 ? (
+                      <Text style={styles.meta}>Aucun profil pour l'instant.</Text>
+                    ) : (
+                      <View style={styles.agentsGrid}>
+                        {candidates.map((candidate) => (
+                          <TouchableOpacity
+                            key={candidate.id}
+                            onPress={() => handleSelectCandidate(candidate.id)}
+                            style={[styles.card, selectedCandidateId === candidate.id && styles.cardSelected]}
+                          >
+                            <View style={styles.cardHeader}>
+                              <Text style={styles.cardTitle}>{candidate.name}</Text>
+                              <Text style={styles.badge}>{candidate.role}</Text>
+                            </View>
+                          <Text style={styles.meta}>Profil succinct: traits {candidate.traits.slice(0, 2).join(", ")}</Text>
+                          <Text style={styles.meta}>Clique pour ouvrir le CV et découvrir le reste.</Text>
+                          <View style={styles.actionsRow}>
+                            <TouchableOpacity
+                              style={styles.secondaryButton}
+                              onPress={() => handleSelectCandidate(candidate.id)}
+                            >
+                              <Text style={styles.secondaryText}>Ouvrir l'entretien</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.actionButtonSecondary}
+                              onPress={() => handleSelectCandidate(candidate.id)}
+                            >
+                              <Text style={[styles.actionText, styles.actionTextSecondary]}>Examiner</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                  {selectedCandidate ? (
+                    <View style={styles.card}>
+                      <View style={styles.cardHeader}>
+                        <Text style={styles.cardTitle}>Entretien avec {selectedCandidate.name}</Text>
+                        <Text style={styles.meta}>Role {selectedCandidate.role}</Text>
+                      </View>
+                      {!cvOpened[selectedCandidate.id] ? (
+                        <View style={{ gap: 8 }}>
+                          <Text style={styles.meta}>
+                            CV fermé : ouvre-le pour découvrir salaire, compétences et points clés.
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.primaryButton}
+                            onPress={() => handleOpenCv(selectedCandidate.id)}
+                            disabled={recruitmentLoading}
+                          >
+                            <Text style={styles.primaryText}>Ouvrir le CV</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={{ gap: 4 }}>
+                          <Text style={styles.meta}>Salaire cible: {formatCurrency(selectedCandidate.salary)}</Text>
+                          <Text style={styles.meta}>Autonomie: {selectedCandidate.autonomy}</Text>
+                          <Text style={styles.meta}>Traits: {selectedCandidate.traits.join(", ")}</Text>
+                          <Text style={styles.meta}>
+                            Points forts: {selectedCandidate.strengths.join(", ")} | Risques:{" "}
+                            {selectedCandidate.weaknesses.join(", ")}
+                          </Text>
+                          <Text style={styles.meta}>
+                            Productivité: {selectedCandidate.productivity} · Motivation:{" "}
+                            {selectedCandidate.motivation.toFixed(0)} · Stabilité: {selectedCandidate.stability.toFixed(0)}
+                          </Text>
+                          <Text style={styles.meta}>
+                            Compétences clés:{" "}
+                            {Object.entries(selectedCandidate.skills)
+                              .slice(0, 3)
+                              .map(([name, score]) => `${name} ${score}`)
+                              .join(" · ")}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.interviewThread}>
+                        {currentInterview.length === 0 ? (
+                          <Text style={styles.meta}>Pose une première question pour lancer la discussion.</Text>
+                        ) : (
+                          currentInterview.map((msg, idx) => (
+                            <View
+                              key={`${msg.sender}-${idx}`}
+                              style={[
+                                styles.chatBubble,
+                                msg.sender === "manager" ? styles.chatManager : styles.chatCandidate,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.meta,
+                                  msg.sender === "manager" ? styles.chatTextManager : styles.chatTextCandidate,
+                                ]}
+                              >
+                                {msg.sender === "manager" ? "Toi" : selectedCandidate.name}: {msg.content}
+                              </Text>
+                            </View>
+                          ))
+                        )}
+                      </View>
+                      <View style={styles.interviewInputRow}>
+                        <TextInput
+                          value={interviewInput}
+                          onChangeText={setInterviewInput}
+                          style={[styles.input, styles.chatInput]}
+                          placeholder="Pose une question d'entretien"
+                          editable={!interviewLoading}
+                        />
+                        <TouchableOpacity
+                          style={[styles.primaryButton, styles.sendButton]}
+                          onPress={handleSendInterview}
+                          disabled={interviewLoading || interviewInput.trim().length === 0}
+                        >
+                          <Text style={styles.primaryText}>Envoyer</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.actionsRow}>
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={handleHireSelected}
+                          disabled={recruitmentLoading}
+                        >
+                          <Text style={styles.actionText}>Recruter</Text>
+                        </TouchableOpacity>
+                        {interviewLoading ? <ActivityIndicator color={palette.text} /> : null}
+                      </View>
+                    </View>
+                  ) : candidates.length ? (
+                    <Text style={styles.meta}>Sélectionne un profil pour démarrer un entretien.</Text>
+                  ) : null}
                 </View>
               )}
 
@@ -697,5 +1001,46 @@ const styles = StyleSheet.create({
   agentItem: {
     flexBasis: "48%",
     minWidth: 260,
+  },
+  cardSelected: {
+    borderColor: palette.accent,
+    borderWidth: 3,
+  },
+  interviewThread: {
+    gap: 8,
+    marginTop: 12,
+  },
+  chatBubble: {
+    padding: 10,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: palette.border,
+  },
+  chatManager: {
+    alignSelf: "flex-end",
+    backgroundColor: palette.accent,
+  },
+  chatCandidate: {
+    alignSelf: "flex-start",
+    backgroundColor: palette.card,
+  },
+  chatTextManager: {
+    color: palette.card,
+  },
+  chatTextCandidate: {
+    color: palette.text,
+  },
+  interviewInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+  },
+  chatInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  sendButton: {
+    minWidth: 110,
   },
 });

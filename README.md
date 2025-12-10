@@ -5,7 +5,7 @@ MVP d'un simulateur d'entreprise où les employés sont modélisés comme des ef
 - `backend/` : API FastAPI (Python, gérée avec `uv`).
 - `frontend/` : app React Native (Expo) pour piloter le dashboard.
 
-L'interface web adopte un thème terminal noir/blanc (fond blanc, police monospace pixelisée) pour garder un look minimaliste.
+L'interface web adopte un thème terminal noir/blanc (fond blanc, police monospace pixelisée) pour garder un look minimaliste. Le backend utilise LangChain (ChatOpenAI) pour deux tâches : recommandations quotidiennes et génération d'un prompt de personnalité pour chaque employé.
 
 ## Lancer le backend
 
@@ -36,6 +36,9 @@ Endpoints principaux :
 - `POST /game/start` : crée une partie et génère les premiers effectifs.
 - `POST /game/action` : applique les décisions du gérant pour le jour en cours et retourne l'état du jour.
 - `GET /game/state/{game_id}` : récupère l'état courant.
+- `POST /recruitment/candidates` : génère une short-list de candidats IA pour une partie donnée.
+- `POST /recruitment/interview` : simule un échange d'entretien avec un candidat (corps: `game_id`, `candidate`, `messages` avec `sender` manager/candidate).
+- `POST /recruitment/hire` : ajoute un candidat sélectionné aux effectifs de la partie.
 
 LLM : le backend utilise exclusivement l'API OpenAI (modèle `gpt-4o-mini` par défaut). Fournis une clé via `OPENAI_API_KEY` avant de lancer le serveur.
 
@@ -56,14 +59,16 @@ npm start
 L'app appelle l'API en `http://localhost:8055` par défaut. Pour cibler un autre backend, définir `EXPO_PUBLIC_API_URL` avant de démarrer Expo.
 Le script `start.sh` lance Expo en mode web (front accessible sur `http://localhost:8056`).  
 L'interface web est pensée pour tenir sur une seule page, découpée en sections avec onglets (Synthèse, Effectifs, Finance, Rapport), sans scroll infini.
+Un onglet Recrutement permet de générer des candidats IA, discuter avec eux via un mini-chat d'entretien puis les ajouter aux effectifs. Les infos sensibles (salaire, compétences détaillées) apparaissent seulement après avoir ouvert leur CV.
 
 ## Supabase
 
-Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont fournis (sinon stockage en mémoire, cela est loggué au démarrage). Les tables attendues côté base sont : `companies`, `agents`, `game_states`, `manager_actions`. Le schéma est maintenu directement dans ton projet Supabase (plus de fichier SQL dans le repo).
+Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont fournis (sinon stockage en mémoire, cela est loggué au démarrage). Les tables attendues côté base sont : `companies`, `agents`, `game_states`, `manager_actions`, **`agent_personas`**. Le schéma est maintenu directement dans ton projet Supabase (plus de fichier SQL dans le repo).
 
 - Variables côté backend : `SUPABASE_URL` (API URL) et `SUPABASE_KEY` (clé service ou anon selon tes règles).
 - En environnement filtré/SSL intercepté, tu peux poser `SUPABASE_VERIFY_SSL=false` pour autoriser un certificat non signé (défaut: true).
-- Sauvegardes effectuées : état de partie dans `game_states` (rapport inclus), synchro de l'entreprise et des agents, journal des actions manager dans `manager_actions` avec le jour concerné.
+- Sauvegardes effectuées : état de partie dans `game_states` (rapport inclus), synchro de l'entreprise et des agents, journal des actions manager dans `manager_actions` avec le jour concerné, prompt de personnalité de chaque agent dans `agent_personas`.
+- Table `agent_personas` attendue : colonnes `id` (UUID par défaut), `game_id` (text), `agent_id` (UUID, unique + FK vers `agents.id`), `prompt` (text), `created_at` (timestamptz par défaut). Le backend upsert sur `agent_id`.
 
 ## Structure
 
