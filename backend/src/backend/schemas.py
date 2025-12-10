@@ -31,5 +31,37 @@ class ActionResponse(BaseModel):
     report: DayReport
 
 
+class RecruitRequest(BaseModel):
+    game_id: str
+
+
+class RecruitResponse(BaseModel):
+    state: GameState
+
+
+class BuyEnergyRequest(BaseModel):
+    game_id: str
+
+
+class BuyEnergyResponse(BaseModel):
+    state: GameState
+
+
 class GameStateResponse(BaseModel):
+    state: GameState
+
+
+class RecruitRequest(BaseModel):
+    game_id: str
+
+
+class RecruitResponse(BaseModel):
+    state: GameState
+
+
+class BuyEnergyRequest(BaseModel):
+    game_id: str
+
+
+class BuyEnergyResponse(BaseModel):
     state: GameState

@@ -6,8 +6,8 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
-SKILL_NAMES = ["production", "marketing", "finance", "support"]
 TRAITS = ["stable", "imprevisible", "logique", "collaboratif", "innovant", "rigoureux"]
+COMPETENCY_NAMES = ["technical", "creativity", "communication", "organisation", "autonomy"]
 
 
 class Agent(BaseModel):
@@ -61,6 +61,8 @@ class DayReport(BaseModel):
     results: BusinessResults
     decisions_impact: List[str]
     recommendations: List[str]
+    energy_total: float
+    energy_used: float
 
 
 class GameState(BaseModel):
@@ -68,6 +70,7 @@ class GameState(BaseModel):
     day: int
     company: Company
     agents: List[Agent]
+    energy_total: float
     last_report: Optional[DayReport] = None
 
 
@@ -88,19 +91,28 @@ def _random_autonomy(rng: random.Random) -> str:
 
 
 def _random_skills(rng: random.Random) -> Dict[str, int]:
-    return {skill: rng.randint(40, 90) for skill in SKILL_NAMES}
+    # Repartit 20 points sur 5 compétences (1 à 10 chacune)
+    stats = {name: 1 for name in COMPETENCY_NAMES}
+    remaining = 20 - len(COMPETENCY_NAMES)
+    keys = COMPETENCY_NAMES[:]
+    while remaining > 0:
+        key = rng.choice(keys)
+        if stats[key] < 10:
+            stats[key] += 1
+            remaining -= 1
+    return stats
 
 
 def _random_traits(rng: random.Random) -> List[str]:
     return rng.sample(TRAITS, k=3)
 
 
-def generate_agent(rng: Optional[random.Random] = None) -> Agent:
+def generate_agent(rng: Optional[random.Random] = None, salary_override: Optional[int] = None) -> Agent:
     rng = rng or random.Random()
-    strengths = rng.sample(SKILL_NAMES, k=2)
-    weaknesses = [s for s in SKILL_NAMES if s not in strengths][:1]
+    strengths = rng.sample(COMPETENCY_NAMES, k=2)
+    weaknesses = [s for s in COMPETENCY_NAMES if s not in strengths][:1]
     productivity = round(rng.uniform(0.6, 1.1), 2)
-    salary = rng.randint(55000, 110000)
+    salary = salary_override if salary_override is not None else rng.randint(55000, 110000)
     return Agent(
         id=str(uuid.uuid4()),
         name=_random_name(rng),
@@ -121,11 +133,12 @@ def initial_company(name: str) -> Company:
 
 def create_initial_state(company_name: str, rng: Optional[random.Random] = None) -> GameState:
     rng = rng or random.Random()
-    agents = [generate_agent(rng) for _ in range(3)]
+    agents: List[Agent] = []
     return GameState(
         game_id=str(uuid.uuid4()),
         day=1,
         company=initial_company(company_name),
         agents=agents,
+        energy_total=100.0,
         last_report=None,
     )

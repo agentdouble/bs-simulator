@@ -6,7 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .llm import get_llm_engine
 from .repositories import GameRepository, InMemoryGameRepository, SupabaseGameRepository
-from .schemas import ActionRequest, ActionResponse, GameStateResponse, StartGameRequest, StartGameResponse
+from .schemas import (
+    ActionRequest,
+    ActionResponse,
+    GameStateResponse,
+    StartGameRequest,
+    StartGameResponse,
+    RecruitRequest,
+    RecruitResponse,
+    BuyEnergyRequest,
+    BuyEnergyResponse,
+)
 from .service import GameService
 
 
@@ -66,3 +76,15 @@ def apply_action(payload: ActionRequest) -> ActionResponse:
 def get_state(game_id: str) -> GameStateResponse:
     state = service.get_state(game_id)
     return GameStateResponse(state=state)
+
+
+@app.post("/game/recruit", response_model=RecruitResponse)
+def recruit(payload: RecruitRequest) -> RecruitResponse:
+    state = service.recruit_agent(payload.game_id)
+    return RecruitResponse(state=state)
+
+
+@app.post("/game/energy/buy", response_model=BuyEnergyResponse)
+def buy_energy(payload: BuyEnergyRequest) -> BuyEnergyResponse:
+    state = service.buy_energy(payload.game_id)
+    return BuyEnergyResponse(state=state)

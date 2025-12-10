@@ -12,6 +12,7 @@ from .domain import (
     BusinessResults,
     DayReport,
     GameState,
+    generate_agent,
     create_initial_state,
 )
 from .llm import LLMEngine
@@ -20,6 +21,12 @@ from .schemas import ActionRequest, ManagerAction, StartGameRequest
 
 
 logger = logging.getLogger(__name__)
+
+ENERGY_PER_AGENT = 40.0
+ENERGY_START = 100.0
+ENERGY_INCREMENT = 100.0
+ENERGY_MAX = 5000.0
+ENERGY_BUY_COST = 1000.0
 
 
 def _clamp(value: float, min_value: float = 0.0, max_value: float = 100.0) -> float:
@@ -34,6 +41,7 @@ class GameService:
 
     def start_game(self, payload: StartGameRequest) -> GameState:
         state = create_initial_state(payload.company_name, rng=self.rng)
+        state.energy_total = ENERGY_START
         report = self._build_report(state, decisions_impact=["Entreprise créée"], extra_costs=0.0)
         state.last_report = report
         self.repository.create(state)
@@ -53,6 +61,7 @@ class GameService:
             day=state.day + 1,
             company=state.company.model_copy(deep=True),
             agents=updated_agents,
+            energy_total=state.energy_total,
             last_report=None,
         )
 
@@ -61,6 +70,47 @@ class GameService:
         self.repository.save(next_state, payload.actions, action_day=action_day)
         logger.info("Etat jour %s enregistré pour %s", report.day, payload.game_id)
         return next_state, report
+
+    def recruit_agent(self, game_id: str) -> GameState:
+        state = self.repository.get(game_id)
+        if not self._has_energy_for_agent(state):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Energie insuffisante pour recruter")
+        new_agent = create_initial_agent(self.rng)
+        agents = state.agents + [new_agent]
+        next_state = GameState(
+            game_id=state.game_id,
+            day=state.day,
+            company=state.company.model_copy(deep=True),
+            agents=agents,
+            energy_total=state.energy_total,
+            last_report=None,
+        )
+        report = self._build_report(next_state, decisions_impact=["Recrutement gratuit"], extra_costs=0.0)
+        next_state.last_report = report
+        self.repository.save(next_state, actions=None, action_day=state.day)
+        return next_state
+
+    def buy_energy(self, game_id: str) -> GameState:
+        state = self.repository.get(game_id)
+        if state.energy_total >= ENERGY_MAX:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Energie maximale atteinte")
+        if state.company.cash < ENERGY_BUY_COST:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Trésorerie insuffisante")
+        new_energy_total = min(ENERGY_MAX, state.energy_total + ENERGY_INCREMENT)
+        company = state.company.model_copy(deep=True)
+        company.cash = round(company.cash - ENERGY_BUY_COST, 2)
+        next_state = GameState(
+            game_id=state.game_id,
+            day=state.day,
+            company=company,
+            agents=list(state.agents),
+            energy_total=new_energy_total,
+            last_report=None,
+        )
+        report = self._build_report(next_state, decisions_impact=["Achat énergie"], extra_costs=0.0)
+        next_state.last_report = report
+        self.repository.save(next_state, actions=None, action_day=state.day)
+        return next_state
 
     def _apply_actions(
         self, agents: List[Agent], actions: List[ManagerAction]
@@ -83,7 +133,7 @@ class GameService:
                 focus = action.focus or "production"
                 skills = dict(agent.skills)
                 if focus in skills:
-                    skills[focus] = _clamp(skills[focus] + 5, max_value=100)
+                    skills[focus] = _clamp(skills[focus] + 2, max_value=10)
                 motivation = _clamp(agent.motivation + 6)
                 agent_map[agent.id] = agent.copy_with_updates(skills=skills, motivation=motivation)
                 decisions_impact.append(f"Formation {focus} pour {agent.name}")
@@ -134,6 +184,8 @@ class GameService:
             results=results,
             decisions_impact=decisions_impact or ["Pas de décision prise"],
             recommendations=[],
+            energy_total=state.energy_total,
+            energy_used=self._energy_used(state.agents),
         )
 
         recommendations = self.llm_engine.generate_recommendations(state, report)
@@ -143,7 +195,7 @@ class GameService:
     def _compute_results(self, agents: List[Agent], extra_costs: float) -> BusinessResults:
         revenue = 0.0
         for agent in agents:
-            skill_factor = sum(agent.skills.values()) / (len(agent.skills) * 100)
+            skill_factor = sum(agent.skills.values()) / (len(agent.skills) * 10)
             motivation_factor = agent.motivation / 100
             output = skill_factor * agent.productivity * (0.6 + motivation_factor)
             variance = 1 + self.rng.uniform(-0.05, 0.1)
@@ -169,3 +221,13 @@ class GameService:
             errors=errors,
             innovations=innovations,
         )
+
+    def _energy_used(self, agents: List[Agent]) -> float:
+        return len(agents) * ENERGY_PER_AGENT
+
+    def _has_energy_for_agent(self, state: GameState) -> bool:
+        return state.energy_total - self._energy_used(state.agents) >= ENERGY_PER_AGENT
+
+
+def create_initial_agent(rng: random.Random) -> Agent:
+    return generate_agent(rng, salary_override=0)

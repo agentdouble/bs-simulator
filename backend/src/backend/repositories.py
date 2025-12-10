@@ -4,7 +4,7 @@ from typing import Dict, List, Protocol
 
 from fastapi import HTTPException, status
 
-from .domain import Agent, Company, DayReport, GameState, COMPETENCY_NAMES
+from .domain import Agent, Company, DayReport, GameState
 from .schemas import ManagerAction
 
 try:
@@ -84,12 +84,14 @@ class SupabaseGameRepository:
         company = self._deserialize_company(company_row)
         agents = [self._deserialize_agent(agent_row) for agent_row in agents_rows]
         report = DayReport(**row["report"]) if row.get("report") else None
+        energy_total = float(row.get("energy_total") or (report.energy_total if report else 100.0))
 
         return GameState(
             game_id=game_id,
             day=int(row["day"]),
             company=company,
             agents=agents,
+            energy_total=energy_total,
             last_report=report,
         )
 
@@ -166,18 +168,6 @@ class SupabaseGameRepository:
         payload = [self._serialize_agent(agent, company_id) for agent in agents]
         self._execute(self.client.table("agents").upsert(payload), "sauvegarde des agents")
 
-    def _upsert_competencies(self, company_id: str, agents: List[Agent]) -> None:
-        if not agents:
-            return
-        self._ensure_competency_table()
-        payload = []
-        for agent in agents:
-            entry = {"company_id": company_id, "agent_id": agent.id}
-            for name in COMPETENCY_NAMES:
-                entry[name] = int(agent.competencies.get(name, 1))
-            payload.append(entry)
-        self._execute(self.client.table("agent_competencies").upsert(payload), "sauvegarde compétences agents")
-
     def _sync_agents(self, company_id: str, agents: List[Agent]) -> None:
         existing = self._execute(
             self.client.table("agents").select("id").eq("company_id", company_id),
@@ -199,70 +189,6 @@ class SupabaseGameRepository:
             "lecture agents",
         )
         return response.data or []
-
-    def _fetch_agent_competencies(self, company_id: str) -> Dict[str, Dict[str, int]]:
-        self._ensure_competency_table()
-        response = self._execute(
-            self.client.table("agent_competencies").select("*").eq("company_id", company_id),
-            "lecture compétences agents",
-        )
-        rows = response.data or []
-        result: Dict[str, Dict[str, int]] = {}
-        for row in rows:
-            comp = {name: int(row.get(name, 1)) for name in COMPETENCY_NAMES}
-            result[str(row["agent_id"])] = comp
-        return result
-
-    def _ensure_competency_table(self) -> None:
-        if self._competency_table_ready:
-            return
-        try:
-            self.client.table("agent_competencies").select("agent_id").limit(1).execute()
-        except Exception as exc:  # pragma: no cover - depends on Supabase runtime
-            message = str(exc)
-            if "agent_competencies" in message or "404" in message or "does not exist" in message:
-                self._bootstrap_competency_table()
-            else:
-                raise
-        self._competency_table_ready = True
-
-    def _bootstrap_competency_table(self) -> None:
-        sql = (
-            "create table if not exists public.agent_competencies (\n"
-            "  agent_id uuid references public.agents(id) on delete cascade,\n"
-            "  company_id uuid references public.companies(id) on delete cascade,\n"
-            "  technical int not null default 1,\n"
-            "  creativity int not null default 1,\n"
-            "  communication int not null default 1,\n"
-            "  organisation int not null default 1,\n"
-            "  autonomy int not null default 1,\n"
-            "  primary key(agent_id)\n"
-            ");"
-        )
-        try:
-            self._execute_pg_meta_query(sql)
-        except Exception as exc:  # pragma: no cover - Supabase connectivity/runtime dependent
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=(
-                    "Impossible de créer automatiquement la table agent_competencies via Supabase pg_meta. "
-                    "Exécute manuellement le SQL suivant (avec la clé service ou via le dashboard Supabase):\n"
-                    f"{sql}"
-                ),
-            ) from exc
-
-    def _execute_pg_meta_query(self, sql: str) -> None:
-        pg_meta_url = f"{self._supabase_url}/rest/v1/pg_meta/query"
-        headers = {
-            "apikey": self._supabase_key,
-            "Authorization": f"Bearer {self._supabase_key}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        }
-        with httpx.Client(verify=self._verify_ssl, timeout=10) as client:
-            response = client.post(pg_meta_url, headers=headers, json={"query": sql})
-        if response.status_code >= 300:
-            raise RuntimeError(f"pg_meta renvoie {response.status_code}: {response.text}")
 
     def _insert_game_state(self, state: GameState, company_id: str) -> None:
         report_payload = state.last_report.model_dump() if state.last_report else None
@@ -310,10 +236,7 @@ class SupabaseGameRepository:
             "stability": agent.stability,
         }
 
-    def _deserialize_agent(self, row: dict, competencies: Dict[str, int] | None) -> Agent:
-        default_competencies = {name: 1 for name in COMPETENCY_NAMES}
-        if competencies:
-            default_competencies.update({name: int(value) for name, value in competencies.items()})
+    def _deserialize_agent(self, row: dict) -> Agent:
         return Agent(
             id=str(row["id"]),
             name=row["name"],
@@ -327,7 +250,6 @@ class SupabaseGameRepository:
             traits=row["traits"],
             motivation=float(row.get("motivation", 0)),
             stability=float(row.get("stability", 0)),
-            competencies=default_competencies,
         )
 
     def _deserialize_company(self, row: dict) -> Company:

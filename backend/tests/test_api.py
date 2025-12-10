@@ -29,7 +29,9 @@ def test_start_and_fetch_state_via_api():
 def test_action_endpoint_returns_report():
     start = client.post("/game/start", json={"company_name": "Action Co"})
     game_id = start.json()["state"]["game_id"]
-    agent_id = start.json()["state"]["agents"][0]["id"]
+    recruit = client.post("/game/recruit", json={"game_id": game_id})
+    assert recruit.status_code == 200
+    agent_id = recruit.json()["state"]["agents"][0]["id"]
 
     payload = {"game_id": game_id, "actions": [{"agent_id": agent_id, "action": "support"}]}
     res = client.post("/game/action", json=payload)

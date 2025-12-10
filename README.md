@@ -70,22 +70,6 @@ Sélectionne un agent (le badge devient noir) puis clique sur un secteur pour l'
 
 Le backend persiste dans Supabase dès que `SUPABASE_URL` et `SUPABASE_KEY` sont fournis (sinon stockage en mémoire, cela est loggué au démarrage). Les tables attendues côté base sont : `companies`, `agents`, `game_states`, `manager_actions`. Le schéma est maintenu directement dans ton projet Supabase (plus de fichier SQL dans le repo).
 
-- Nouvelle table obligatoire : `agent_competencies` qui stocke les 5 statistiques des agents (colonnes `agent_id`, `company_id`, `technical`, `creativity`, `communication`, `organisation`, `autonomy`). Exemple de création :
-
-```sql
-create table if not exists public.agent_competencies (
-  agent_id uuid references public.agents(id) on delete cascade,
-  company_id uuid references public.companies(id) on delete cascade,
-  technical int not null default 1,
-  creativity int not null default 1,
-  communication int not null default 1,
-  organisation int not null default 1,
-  autonomy int not null default 1,
-  primary key(agent_id)
-);
-```
-- Si la table est absente, le backend tente de la créer automatiquement via l'API `pg_meta` de Supabase (utilise `SUPABASE_KEY` en service role). Si la clé n'a pas les droits, l'API renverra un 500 avec le SQL ci-dessus à exécuter manuellement.
-
 - Variables côté backend : `SUPABASE_URL` (API URL) et `SUPABASE_KEY` (clé service ou anon selon tes règles).
 - En environnement filtré/SSL intercepté, tu peux poser `SUPABASE_VERIFY_SSL=false` pour autoriser un certificat non signé (défaut: true).
 - Sauvegardes effectuées : état de partie dans `game_states` (rapport inclus), synchro de l'entreprise et des agents, journal des actions manager dans `manager_actions` avec le jour concerné.

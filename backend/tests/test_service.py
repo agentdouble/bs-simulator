@@ -15,7 +15,8 @@ def test_start_game_creates_state():
 
     assert state.game_id
     assert state.day == 1
-    assert len(state.agents) >= 3
+    assert len(state.agents) == 0
+    assert state.energy_total == 100
     assert state.last_report is not None
     assert state.company.name == "Nova Corp"
 
@@ -24,9 +25,10 @@ def test_apply_actions_updates_day_and_agents():
     service = GameService(InMemoryGameRepository(), StubLLMEngine())
     state = service.start_game(StartGameRequest(company_name="Nova Corp"))
 
-    target_agent = state.agents[0]
+    recruited = service.recruit_agent(state.game_id)
+    target_agent = recruited.agents[0]
     request = ActionRequest(
-        game_id=state.game_id,
+        game_id=recruited.game_id,
         actions=[ManagerAction(agent_id=target_agent.id, action="train", focus="marketing")],
     )
 
